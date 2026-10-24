@@ -173,13 +173,20 @@ export default function Biblioteca() {
   const [lendo, setLendo] = useState(false);
   const [sonata, setSonata] = useState(false);
   const [aviso, setAviso] = useState('');
+  const [momentos, setMomentos] = useState([]);
+  const [liga, setLiga] = useState(new Set()); // "musica_id:momento_id"
+  const [momFiltro, setMomFiltro] = useState('');
 
   const carregar = async () => {
     const agora = new Date(Date.now() - 12 * 3600e3).toISOString();
-    const [a, b] = await Promise.all([
+    const [a, b, m, l] = await Promise.all([
       supabase.from('missa_musicas').select('*').order('nome'),
-      supabase.from('missa_itens').select('musica_id, momento, missa_celebracoes!inner(id, data_hora, titulo)').not('musica_id', 'is', null).gte('missa_celebracoes.data_hora', agora)
+      supabase.from('missa_itens').select('musica_id, momento, missa_celebracoes!inner(id, data_hora, titulo)').not('musica_id', 'is', null).gte('missa_celebracoes.data_hora', agora),
+      supabase.from('missa_momentos').select('id, nome, ordem').eq('ativo', true).order('ordem'),
+      supabase.from('missa_musicas_momentos').select('*')
     ]);
+    setMomentos(m.data || []);
+    setLiga(new Set((l.data || []).map(x => x.musica_id + ':' + x.momento_id)));
     setFichas(a.data || []);
     const u = {};
     (b.data || []).forEach(x => { (u[x.musica_id] ||= []).push({ momento: x.momento, ...x.missa_celebracoes }); });
@@ -203,10 +210,22 @@ export default function Biblioteca() {
   }
   const tirar = id => setImportados(x => x.filter(i => i.id !== id));
 
+  // Marca ou desmarca o momento da música (grava na hora, como no Sonata)
+  async function alternar(mid, moid) {
+    const k = mid + ':' + moid; const tem = liga.has(k);
+    const nova = new Set(liga); tem ? nova.delete(k) : nova.add(k); setLiga(nova);
+    const { error } = tem
+      ? await supabase.from('missa_musicas_momentos').delete().match({ musica_id: mid, momento_id: moid })
+      : await supabase.from('missa_musicas_momentos').insert({ musica_id: mid, momento_id: moid });
+    if (error) { setAviso(''); alert('Não foi possível salvar o momento: ' + error.message); carregar(); }
+  }
+
   const t = simples(busca);
   const faltam = fichas.filter(x => usos[x.id] && !x.cifra.trim());
   const vis = fichas.filter(x => {
     if (t && !simples(x.nome + ' ' + x.artista).includes(t)) return false;
+    if (momFiltro === 'nenhum' && momentos.some(m => liga.has(x.id + ':' + m.id))) return false;
+    if (momFiltro && momFiltro !== 'nenhum' && !liga.has(x.id + ':' + momFiltro)) return false;
     if (filtro === 'faltando') return !x.cifra.trim() || !x.tom_original.trim();
     if (filtro === 'proximas') return !!usos[x.id];
     return true;
@@ -242,7 +261,14 @@ export default function Biblioteca() {
         <button className={filtro === 'proximas' ? 'on' : ''} onClick={() => setFiltro('proximas')}>Nas próximas missas</button>
         <button className={filtro === 'faltando' ? 'on' : ''} onClick={() => setFiltro('faltando')}>Sem cifra ou sem tom</button>
       </div>
-      <input placeholder="Buscar por música ou autor" value={busca} onChange={e => setBusca(e.target.value)} />
+      <div className="row" style={{ alignItems: 'flex-start' }}>
+        <input placeholder="Buscar por música ou autor" value={busca} onChange={e => setBusca(e.target.value)} style={{ flex: '1 1 200px' }} />
+        <select value={momFiltro} onChange={e => setMomFiltro(e.target.value)} style={{ flex: '0 1 220px' }}>
+          <option value="">Todos os momentos</option>
+          {momentos.map(m => <option key={m.id} value={m.id}>{m.nome}</option>)}
+          <option value="nenhum">Sem momento marcado</option>
+        </select>
+      </div>
       {vis.length === 0 && <div className="card mut">{fichas.length ? 'Nenhuma música encontrada.' : 'A Biblioteca está vazia. Importe PDFs do Cifra Club, copie do Sonata ou cadastre uma música.'}</div>}
       {vis.map(x => (
         <div key={x.id} className="card">
@@ -254,6 +280,12 @@ export default function Biblioteca() {
             {selo(!!x.cifra.trim(), 'Cifra')}{x.grade && selo(true, 'Grade')}
             {x.tom_original ? <span className="chip" style={{ cursor: 'default' }}>Tom original: {x.tom_original}</span> : selo(false, 'Tom original')}
             {x.tom_padrao && <span className="chip on" style={{ cursor: 'default' }}>Eu canto em: {x.tom_padrao}</span>}
+          </div>
+          <div className="chips" aria-label="Momentos desta música">
+            {momentos.map(m => {
+              const on = liga.has(x.id + ':' + m.id);
+              return <button key={m.id} className={'chip' + (on ? ' on' : '')} onClick={() => alternar(x.id, m.id)}>{on ? '✓ ' : ''}{m.nome}</button>;
+            })}
           </div>
           {x.obs && <div className="mut" style={{ fontSize: '.85rem', marginTop: 6 }}>{x.obs}</div>}
           {usos[x.id] && <div className="mut" style={{ fontSize: '.85rem', marginTop: 6 }}>Em: {usos[x.id].map(u => `${u.momento} (${dataCurta(u.data_hora)})`).join(', ')}</div>}

@@ -71,10 +71,14 @@ function NovaMissa({ anteriores, onCriada, onCancelar }) {
   );
 }
 
-function Item({ it, n, total, musicas, porMomento, onMudar, onMover, onTirar, onDuplicar }) {
+function Item({ it, n, total, musicas, porMomento, indicadas, onMudar, onMover, onTirar, onDuplicar }) {
   const m = musicas.find(x => x.id === it.musica_id);
   const usadas = porMomento[it.momento.toLowerCase()] || {};
-  const sugeridas = musicas.filter(x => usadas[x.id]).sort((a, b) => usadas[b.id] - usadas[a.id]);
+  // 1º as marcadas na Biblioteca para este momento; 2º as já usadas nele; depois as outras
+  const doMomento = indicadas[it.momento.toLowerCase()] || new Set();
+  const marcadas = musicas.filter(x => doMomento.has(x.id));
+  const sugeridas = musicas.filter(x => usadas[x.id] && !doMomento.has(x.id)).sort((a, b) => usadas[b.id] - usadas[a.id]);
+  const outras = musicas.filter(x => !doMomento.has(x.id) && !usadas[x.id]);
   const tomEfetivo = it.tom || m?.tom_padrao || m?.tom_original || '';
   return (
     <div className="item">
@@ -90,8 +94,9 @@ function Item({ it, n, total, musicas, porMomento, onMudar, onMover, onTirar, on
       <div className="item-campos">
         <select value={it.musica_id || ''} onChange={e => onMudar({ musica_id: e.target.value || null, tom: '' })} style={{ width: '100%' }}>
           <option value="">— escolher música —</option>
-          {sugeridas.length > 0 && <optgroup label={`Já usadas em ${it.momento}`}>{sugeridas.map(x => <option key={'s' + x.id} value={x.id}>{x.nome}{x.artista ? ' · ' + x.artista : ''}</option>)}</optgroup>}
-          <optgroup label="Todas as músicas">{musicas.map(x => <option key={x.id} value={x.id}>{x.nome}{x.artista ? ' · ' + x.artista : ''}</option>)}</optgroup>
+          {marcadas.length > 0 && <optgroup label={`Músicas de ${it.momento}`}>{marcadas.map(x => <option key={x.id} value={x.id}>{x.nome}{x.artista ? ' · ' + x.artista : ''}</option>)}</optgroup>}
+          {sugeridas.length > 0 && <optgroup label={`Já usadas em ${it.momento}`}>{sugeridas.map(x => <option key={x.id} value={x.id}>{x.nome}{x.artista ? ' · ' + x.artista : ''}</option>)}</optgroup>}
+          {outras.length > 0 && <optgroup label={marcadas.length || sugeridas.length ? 'Outras músicas' : 'Todas as músicas'}>{outras.map(x => <option key={x.id} value={x.id}>{x.nome}{x.artista ? ' · ' + x.artista : ''}</option>)}</optgroup>}
         </select>
         <input key={'t' + it.id + it.musica_id} defaultValue={it.tom} placeholder={m?.tom_padrao || m?.tom_original || 'Tom'} aria-label="Tom"
           onBlur={e => e.target.value.trim() !== it.tom && onMudar({ tom: e.target.value.trim() })} />
@@ -105,7 +110,7 @@ function Item({ it, n, total, musicas, porMomento, onMudar, onMover, onTirar, on
   );
 }
 
-function Detalhe({ id, musicos, musicas, porMomento, momentos, onFechar, onMudou }) {
+function Detalhe({ id, musicos, musicas, porMomento, indicadas, momentos, onFechar, onMudou }) {
   const [c, setC] = useState(null);
   const [itens, setItens] = useState([]);
   const [escala, setEscala] = useState([]);
@@ -213,7 +218,7 @@ function Detalhe({ id, musicos, musicas, porMomento, momentos, onFechar, onMudou
       {musicas.length === 0 && <p className="mut">A Biblioteca ainda está vazia: cadastre as músicas na aba Biblioteca para escolher aqui.</p>}
       <div>
         {itens.map((it, n) => (
-          <Item key={it.id} it={it} n={n} total={itens.length} musicas={musicas} porMomento={porMomento}
+          <Item key={it.id} it={it} n={n} total={itens.length} musicas={musicas} porMomento={porMomento} indicadas={indicadas}
             onMudar={campos => mudarItem(it, campos)} onMover={d => mover(n, d)} onTirar={() => tirar(it)} onDuplicar={() => inserir(it.momento, n)} />
         ))}
       </div>
@@ -257,18 +262,21 @@ export default function Missas() {
   const [musicas, setMusicas] = useState([]);
   const [momentos, setMomentos] = useState([]);
   const [historico, setHistorico] = useState([]);
+  const [ligacoes, setLigacoes] = useState([]);
   const [nova, setNova] = useState(false);
   const [aberta, setAberta] = useState(null);
   const [verAnteriores, setVerAnteriores] = useState(false);
 
   const carregar = async () => {
-    const [a, b, d, e, g] = await Promise.all([
+    const [a, b, d, e, g, h] = await Promise.all([
       supabase.from('missa_celebracoes').select('*').order('data_hora'),
       supabase.from('missa_itens').select('celebracao_id, momento, musica_id'),
       supabase.from('missa_musicos').select('*').order('nome'),
       supabase.from('missa_musicas').select('id, nome, artista, cifra, tom_original, tom_padrao').order('nome'),
-      supabase.from('missa_momentos').select('*').order('ordem')
+      supabase.from('missa_momentos').select('*').order('ordem'),
+      supabase.from('missa_musicas_momentos').select('*')
     ]);
+    setLigacoes(h.data || []);
     setLista(a.data || []);
     const r = {};
     (b.data || []).forEach(i => { const x = (r[i.celebracao_id] ||= { total: 0, faltam: 0 }); x.total++; if (!i.musica_id) x.faltam++; });
@@ -284,8 +292,16 @@ export default function Missas() {
     return p;
   }, [historico]);
 
+  // Músicas marcadas na Biblioteca para cada momento (pelo nome do momento)
+  const indicadas = useMemo(() => {
+    const nomeDe = Object.fromEntries(momentos.map(m => [m.id, m.nome.toLowerCase()]));
+    const r = {};
+    ligacoes.forEach(l => { const k = nomeDe[l.momento_id]; if (k) (r[k] ||= new Set()).add(l.musica_id); });
+    return r;
+  }, [ligacoes, momentos]);
+
   if (lista === null) return <p className="mut">Carregando…</p>;
-  if (aberta) return <Detalhe id={aberta} musicos={musicos} musicas={musicas} porMomento={porMomento} momentos={momentos}
+  if (aberta) return <Detalhe id={aberta} musicos={musicos} musicas={musicas} porMomento={porMomento} indicadas={indicadas} momentos={momentos}
     onMudou={carregar} onFechar={() => { setAberta(null); carregar(); }} />;
 
   const limite = Date.now() - 12 * 3600e3;
