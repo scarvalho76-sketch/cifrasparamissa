@@ -73,12 +73,11 @@ function NovaMissa({ anteriores, onCriada, onCancelar }) {
 
 function Item({ it, n, total, numero, musicas, porMomento, indicadas, onMudar, onMover, onTirar, onDuplicar }) {
   const m = musicas.find(x => x.id === it.musica_id);
-  const usadas = porMomento[it.momento.toLowerCase()] || {};
-  // 1º as marcadas na Biblioteca para este momento; 2º as já usadas nele; depois as outras
+  // Só as músicas marcadas na Biblioteca para este momento
   const doMomento = indicadas[it.momento.toLowerCase()] || new Set();
   const marcadas = musicas.filter(x => doMomento.has(x.id));
-  const sugeridas = musicas.filter(x => usadas[x.id] && !doMomento.has(x.id)).sort((a, b) => usadas[b.id] - usadas[a.id]);
-  const outras = musicas.filter(x => !doMomento.has(x.id) && !usadas[x.id]);
+  // a música já escolhida continua visível mesmo que tenha sido desmarcada deste momento
+  const foraDaLista = m && !doMomento.has(m.id);
   const tomEfetivo = it.tom || m?.tom_padrao || m?.tom_original || '';
   return (
     <div className="item">
@@ -93,16 +92,16 @@ function Item({ it, n, total, numero, musicas, porMomento, indicadas, onMudar, o
       </div>
       <div className="item-campos">
         <select value={it.musica_id || ''} onChange={e => onMudar({ musica_id: e.target.value || null, tom: '' })} style={{ width: '100%' }}>
-          <option value="">— escolher música —</option>
-          {marcadas.length > 0 && <optgroup label={`Músicas de ${it.momento}`}>{marcadas.map(x => <option key={x.id} value={x.id}>{x.nome}{x.artista ? ' · ' + x.artista : ''}</option>)}</optgroup>}
-          {sugeridas.length > 0 && <optgroup label={`Já usadas em ${it.momento}`}>{sugeridas.map(x => <option key={x.id} value={x.id}>{x.nome}{x.artista ? ' · ' + x.artista : ''}</option>)}</optgroup>}
-          {outras.length > 0 && <optgroup label={marcadas.length || sugeridas.length ? 'Outras músicas' : 'Todas as músicas'}>{outras.map(x => <option key={x.id} value={x.id}>{x.nome}{x.artista ? ' · ' + x.artista : ''}</option>)}</optgroup>}
+          <option value="">{marcadas.length ? '— escolher música —' : '— nenhuma música marcada —'}</option>
+          {marcadas.map(x => <option key={x.id} value={x.id}>{x.nome}{x.artista ? ' · ' + x.artista : ''}</option>)}
+          {foraDaLista && <option value={m.id}>{m.nome}{m.artista ? ' · ' + m.artista : ''} (não marcada para {it.momento})</option>}
         </select>
         <input key={'t' + it.id + it.musica_id} defaultValue={it.tom} placeholder={m?.tom_padrao || m?.tom_original || 'Tom'} aria-label="Tom"
           onBlur={e => e.target.value.trim() !== it.tom && onMudar({ tom: e.target.value.trim() })} />
       </div>
       <input key={'o' + it.id} defaultValue={it.obs} placeholder="Observação (opcional)" style={{ margin: '0 0 4px' }}
         onBlur={e => e.target.value.trim() !== it.obs && onMudar({ obs: e.target.value.trim() })} />
+      {marcadas.length === 0 && <div className="falta">Nenhuma música marcada para {it.momento}. Marque na aba Biblioteca, nos botões de momento de cada música.</div>}
       {m && !m.cifra.trim() && <div className="falta">Esta música ainda não tem cifra na Biblioteca.</div>}
       {m && m.cifra.trim() && !m.tom_original && tomEfetivo && <div className="falta">Sem tom original na Biblioteca: a cifra não será transposta.</div>}
       {it.tom && !lerTom(it.tom) && <div className="falta">Não entendi o tom “{it.tom}”.</div>}
