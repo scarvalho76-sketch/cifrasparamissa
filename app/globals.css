@@ -81,6 +81,7 @@ details.card summary{cursor:pointer}
 .cer .cer-obs{margin:8px 0 0;padding:8px 12px;border-left:3px solid var(--ouro);background:var(--fundo);font-style:italic;line-height:1.5}
 .cer .cer-leitura{border-top-color:var(--line);background:var(--fundo)}
 .cer .cer-leitura.cer-ativo{background:var(--card)}
+.cer .cer-rolagem{position:sticky;bottom:8px;z-index:4;display:flex;align-items:center;gap:6px;margin-top:12px;padding:8px 10px;background:var(--card);border:1px solid var(--line);border-radius:6px;box-shadow:0 4px 16px rgba(0,0,0,.12)}
 .cer .cer-sem{border-style:dashed;font-size:.75rem}
 .cer .cer-momento{display:block;font-size:.8rem;text-transform:uppercase;letter-spacing:.06em;color:var(--mut)}
 .cer .cer-musica{display:block;font-weight:600;font-size:1.05rem}
