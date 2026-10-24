@@ -135,6 +135,7 @@ export default function Biblioteca() {
   const [momentos, setMomentos] = useState([]);
   const [liga, setLiga] = useState(new Set()); // "musica_id:momento_id"
   const [momFiltro, setMomFiltro] = useState('');
+  const leitura = ehConta(); // amigos só consultam a Biblioteca
 
   const carregar = async () => {
     const agora = new Date(Date.now() - 12 * 3600e3).toISOString();
@@ -195,13 +196,13 @@ export default function Biblioteca() {
     <>
       <div className="row" style={{ marginBottom: 12 }}>
         <h2 style={{ margin: 0 }}>Biblioteca <span className="mut" style={{ fontWeight: 400 }}>· {fichas.length} {fichas.length === 1 ? 'música' : 'músicas'}</span></h2>
-        <span className="row" style={{ gap: 6 }}>
+        {!leitura && <span className="row" style={{ gap: 6 }}>
           <label style={{ display: 'inline-block', cursor: 'pointer', border: '1px solid var(--ouro)', borderRadius: 3, padding: '8px 14px', color: 'var(--ouro-escuro)', margin: 0, fontSize: '1rem' }}>
             {lendo ? 'Lendo…' : '📄 Importar PDFs'}
             <input type="file" accept="application/pdf" multiple onChange={importarVarios} style={{ display: 'none' }} />
           </label>
           <button className="sec" onClick={() => setAberto(aberto === 'novo' ? null : 'novo')}>{aberto === 'novo' ? 'Fechar' : '+ Música'}</button>
-        </span>
+        </span>}
       </div>
       {aviso && <p className="okmsg">{aviso}</p>}
       {faltam.length > 0 && <div className="card late"><strong>Faltando cifra em músicas das próximas missas:</strong> {faltam.map(x => x.nome).join(', ')}</div>}
@@ -226,12 +227,12 @@ export default function Biblioteca() {
           <option value="nenhum">Sem momento marcado</option>
         </select>
       </div>
-      {vis.length === 0 && <div className="card mut">{fichas.length ? 'Nenhuma música encontrada.' : 'A Biblioteca está vazia. Importe PDFs do Cifra Club ou cadastre uma música.'}</div>}
+      {vis.length === 0 && <div className="card mut">{fichas.length ? 'Nenhuma música encontrada.' : (leitura ? 'A Biblioteca ainda está vazia.' : 'A Biblioteca está vazia. Importe PDFs do Cifra Club ou cadastre uma música.')}</div>}
       {vis.map(x => (
         <div key={x.id} className="card">
           <div className="row">
             <span><strong>{x.nome}</strong>{x.artista ? <span className="mut"> · {x.artista}</span> : null}</span>
-            <button className="sec mini" onClick={() => setAberto(aberto === x.id ? null : x.id)}>{aberto === x.id ? 'Fechar' : 'Editar'}</button>
+            <button className="sec mini" onClick={() => setAberto(aberto === x.id ? null : x.id)}>{aberto === x.id ? 'Fechar' : leitura ? 'Ver cifra' : 'Editar'}</button>
           </div>
           <div className="chips">
             {selo(!!x.cifra.trim(), 'Cifra')}{x.grade && selo(true, 'Grade')}
@@ -241,14 +242,20 @@ export default function Biblioteca() {
           </div>
           <div className="chips" aria-label="Momentos desta música" style={{ alignItems: 'center', borderTop: '1px dashed var(--line)', paddingTop: 8 }}>
             <span className="mut" style={{ fontSize: '.85rem', marginRight: 2 }}>Momentos:</span>
-            {momentos.map(m => {
-              const on = liga.has(x.id + ':' + m.id);
-              return <button key={m.id} className={'chip' + (on ? ' on' : '')} onClick={() => alternar(x.id, m.id)}>{on ? '✓ ' : ''}{m.nome}</button>;
-            })}
+            {leitura
+              ? (momentos.filter(m => liga.has(x.id + ':' + m.id)).map(m => <span key={m.id} className="chip on" style={{ cursor: 'default' }}>{m.nome}</span>)
+                  .concat(momentos.some(m => liga.has(x.id + ':' + m.id)) ? [] : [<span key="0" className="mut" style={{ fontSize: '.85rem' }}>nenhum</span>]))
+              : momentos.map(m => {
+                const on = liga.has(x.id + ':' + m.id);
+                return <button key={m.id} className={'chip' + (on ? ' on' : '')} onClick={() => alternar(x.id, m.id)}>{on ? '✓ ' : ''}{m.nome}</button>;
+              })}
           </div>
           {x.obs && <div className="mut" style={{ fontSize: '.85rem', marginTop: 6 }}>{x.obs}</div>}
           {usos[x.id] && <div className="mut" style={{ fontSize: '.85rem', marginTop: 6 }}>Em: {usos[x.id].map(u => `${u.momento} (${dataCurta(u.data_hora)})`).join(', ')}</div>}
-          {aberto === x.id && <Editor ficha={x} existentes={existentes} onSalvo={() => { setAberto(null); carregar(); }} onCancelar={() => setAberto(null)} />}
+          {aberto === x.id && leitura && (x.cifra.trim()
+            ? <pre style={{ ...mono, marginTop: 10, padding: 12, border: '1px solid var(--line)', borderRadius: 3, background: 'var(--fundo)' }}>{x.cifra}</pre>
+            : <p className="mut">Esta música ainda não tem cifra.</p>)}
+          {aberto === x.id && !leitura && <Editor ficha={x} existentes={existentes} onSalvo={() => { setAberto(null); carregar(); }} onCancelar={() => setAberto(null)} />}
         </div>
       ))}
     </>

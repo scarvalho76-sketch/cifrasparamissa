@@ -64,7 +64,7 @@ export default function Amigos() {
         <h2 style={{ margin: 0 }}>Amigos</h2>
         {!f && <button className="sec" onClick={() => setF({ nome: '', telefone: '' })}>+ Novo amigo</button>}
       </div>
-      <p className="mut">Cada amigo entra pelo próprio link e tem as próprias missas e músicos. A Biblioteca de músicas e a lista de momentos são as mesmas para todos (amigos podem cadastrar e editar músicas, mas não excluir). Você não vê as missas deles, e eles não veem as suas.</p>
+      <p className="mut">Cada amigo entra pelo próprio link e tem as próprias missas e músicos. A Biblioteca de músicas e a lista de momentos são as mesmas para todos: os amigos consultam e escolhem as músicas, mas só você cadastra e altera. Você não vê as missas deles, e eles não veem as suas.</p>
       {f && !f.id && Form()}
       {lista.length === 0 && !f && <div className="card mut">Nenhum amigo cadastrado.</div>}
       {lista.map(a => f?.id === a.id ? <div key={a.id}>{Form()}</div> : (
