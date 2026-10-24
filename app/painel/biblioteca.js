@@ -122,57 +122,6 @@ function Editor({ ficha, inicial, onSalvo, onCancelar, existentes }) {
   );
 }
 
-// Copia fichas da Biblioteca do Sonata Casamentos (só leitura lá; nada é alterado no Sonata)
-function DoSonata({ existentes, onFeito, onFechar }) {
-  const [lista, setLista] = useState(null);
-  const [marcadas, setMarcadas] = useState({});
-  const [busca, setBusca] = useState('');
-  const [msg, setMsg] = useState('');
-  useEffect(() => {
-    supabase.from('letras_cifras').select('nome, artista, cifra, letra, grade, tom_original').order('nome')
-      .then(({ data, error }) => { if (error) setMsg('Não foi possível ler a Biblioteca do Sonata: ' + error.message); setLista((data || []).filter(x => x.cifra)); });
-  }, []);
-  const t = simples(busca);
-  const vis = (lista || []).filter(x => !t || simples(x.nome + ' ' + x.artista).includes(t));
-  const n = Object.values(marcadas).filter(Boolean).length;
-
-  async function copiar() {
-    const linhas = (lista || []).filter(x => marcadas[chave(x.nome, x.artista)])
-      .filter(x => !existentes[chave(x.nome, x.artista)])
-      .map(x => ({ nome: x.nome.trim(), artista: (x.artista || '').trim(), cifra: x.cifra || '', letra: x.letra || '', grade: x.grade || '', tom_original: x.tom_original || '' }));
-    if (!linhas.length) return setMsg('Nenhuma música nova selecionada.');
-    const { error } = await supabase.from('missa_musicas').insert(linhas);
-    if (error) return setMsg('Não foi possível copiar: ' + error.message);
-    onFeito(linhas.length);
-  }
-
-  return (
-    <div className="card" style={{ borderLeft: '4px solid var(--ouro)' }}>
-      <div className="row"><h2 style={{ margin: 0 }}>Copiar do Sonata Casamentos</h2><button className="sec mini" onClick={onFechar}>Fechar</button></div>
-      <p className="mut">Escolha as músicas que também servem para missas. Elas são copiadas para cá; o Sonata não é alterado.</p>
-      {lista === null ? <p className="mut">Carregando…</p> : (
-        <>
-          <input placeholder="Buscar" value={busca} onChange={e => setBusca(e.target.value)} />
-          <div style={{ maxHeight: 320, overflowY: 'auto', border: '1px solid var(--line)', borderRadius: 3, padding: '4px 10px' }}>
-            {vis.map(x => {
-              const k = chave(x.nome, x.artista); const ja = !!existentes[k];
-              return (
-                <label key={k} style={{ display: 'flex', gap: 10, alignItems: 'center', padding: '6px 0', fontSize: '1rem', color: 'var(--ink)', opacity: ja ? .5 : 1 }}>
-                  <input type="checkbox" style={{ width: 'auto', margin: 0 }} disabled={ja} checked={ja || !!marcadas[k]} onChange={e => setMarcadas({ ...marcadas, [k]: e.target.checked })} />
-                  <span>{x.nome}{x.artista ? <span className="mut"> · {x.artista}</span> : null}{ja ? <span className="mut"> (já está aqui)</span> : null}</span>
-                </label>
-              );
-            })}
-            {vis.length === 0 && <p className="mut">Nenhuma música com cifra encontrada.</p>}
-          </div>
-          {msg && <p className="err">{msg}</p>}
-          <button style={{ marginTop: 12 }} onClick={copiar} disabled={!n}>Copiar {n || ''} {n === 1 ? 'música' : 'músicas'}</button>
-        </>
-      )}
-    </div>
-  );
-}
-
 export default function Biblioteca() {
   const [fichas, setFichas] = useState([]);
   const [usos, setUsos] = useState({});      // musica_id -> próximas missas
@@ -181,7 +130,6 @@ export default function Biblioteca() {
   const [filtro, setFiltro] = useState('todas');
   const [importados, setImportados] = useState([]);
   const [lendo, setLendo] = useState(false);
-  const [sonata, setSonata] = useState(false);
   const [aviso, setAviso] = useState('');
   const [momentos, setMomentos] = useState([]);
   const [liga, setLiga] = useState(new Set()); // "musica_id:momento_id"
@@ -251,13 +199,11 @@ export default function Biblioteca() {
             {lendo ? 'Lendo…' : '📄 Importar PDFs'}
             <input type="file" accept="application/pdf" multiple onChange={importarVarios} style={{ display: 'none' }} />
           </label>
-          <button className="sec" onClick={() => setSonata(!sonata)}>Copiar do Sonata</button>
           <button className="sec" onClick={() => setAberto(aberto === 'novo' ? null : 'novo')}>{aberto === 'novo' ? 'Fechar' : '+ Música'}</button>
         </span>
       </div>
       {aviso && <p className="okmsg">{aviso}</p>}
       {faltam.length > 0 && <div className="card late"><strong>Faltando cifra em músicas das próximas missas:</strong> {faltam.map(x => x.nome).join(', ')}</div>}
-      {sonata && <DoSonata existentes={existentes} onFechar={() => setSonata(false)} onFeito={n => { setSonata(false); setAviso(`${n} ${n === 1 ? 'música copiada' : 'músicas copiadas'} do Sonata.`); carregar(); }} />}
       {importados.length > 0 && <p className="mut">Revise cada música importada e toque em Salvar.</p>}
       {importados.map(i => (
         <div key={i.id} className="card" style={{ borderLeft: '4px solid var(--ouro)' }}>
@@ -279,7 +225,7 @@ export default function Biblioteca() {
           <option value="nenhum">Sem momento marcado</option>
         </select>
       </div>
-      {vis.length === 0 && <div className="card mut">{fichas.length ? 'Nenhuma música encontrada.' : 'A Biblioteca está vazia. Importe PDFs do Cifra Club, copie do Sonata ou cadastre uma música.'}</div>}
+      {vis.length === 0 && <div className="card mut">{fichas.length ? 'Nenhuma música encontrada.' : 'A Biblioteca está vazia. Importe PDFs do Cifra Club ou cadastre uma música.'}</div>}
       {vis.map(x => (
         <div key={x.id} className="card">
           <div className="row">
