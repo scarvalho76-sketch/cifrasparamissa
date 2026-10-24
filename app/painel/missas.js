@@ -3,7 +3,7 @@ import { useEffect, useMemo, useState } from 'react';
 import { supabase } from '@/lib/supabase';
 import { linkWhatsApp } from '@/lib/whatsapp';
 import { lerTom } from '@/lib/musica';
-import { dataLonga, dataCurta, fmtData, fmtHora, juntarDataHora, TEMPOS, buscarLiturgia, ehAclamacao, tempoDaLiturgia } from '@/lib/util';
+import { dataLonga, dataCurta, fmtData, fmtHora, juntarDataHora, TEMPOS, buscarLiturgia, ehAclamacao, tempoDaLiturgia, serveNoTempo } from '@/lib/util';
 import CampoDataHora from './campoData';
 import LeiturasDoDia from './leituras';
 import { ehConta } from '@/lib/conta';
@@ -113,13 +113,14 @@ function BuscarAntifona({ data, onAchou }) {
   );
 }
 
-function Item({ it, n, total, numero, data, musicas, porMomento, indicadas, onMudar, onTirar, onDuplicar }) {
+function Item({ it, n, total, numero, data, tempo, musicas, porMomento, indicadas, onMudar, onTirar, onDuplicar }) {
   const m = musicas.find(x => x.id === it.musica_id);
   // Só as músicas marcadas na Biblioteca para este momento
   const doMomento = indicadas[it.momento.toLowerCase()] || new Set();
-  const marcadas = musicas.filter(x => doMomento.has(x.id));
-  // a música já escolhida continua visível mesmo que tenha sido desmarcada deste momento
-  const foraDaLista = m && !doMomento.has(m.id);
+  // do momento e do tempo litúrgico da missa (músicas sem tempo marcado servem em todos)
+  const marcadas = musicas.filter(x => doMomento.has(x.id) && serveNoTempo(x, tempo));
+  // a música já escolhida continua visível mesmo que tenha sido desmarcada deste momento ou tempo
+  const foraDaLista = m && !marcadas.some(x => x.id === m.id);
   const tomEfetivo = it.tom || m?.tom_padrao || m?.tom_original || '';
   return (
     <div className="item">
@@ -134,7 +135,7 @@ function Item({ it, n, total, numero, data, musicas, porMomento, indicadas, onMu
         <select value={it.musica_id || ''} onChange={e => onMudar({ musica_id: e.target.value || null, tom: '' })} style={{ width: '100%' }}>
           <option value="">{marcadas.length ? '— escolher música —' : '— nenhuma música marcada —'}</option>
           {marcadas.map(x => <option key={x.id} value={x.id}>{x.nome}{x.artista ? ' · ' + x.artista : ''}</option>)}
-          {foraDaLista && <option value={m.id}>{m.nome}{m.artista ? ' · ' + m.artista : ''} (não marcada para {it.momento})</option>}
+          {foraDaLista && <option value={m.id}>{m.nome}{m.artista ? ' · ' + m.artista : ''} ({doMomento.has(m.id) ? `não é do tempo ${tempo}` : `não marcada para ${it.momento}`})</option>}
         </select>
         <input key={'t' + it.id + it.musica_id} defaultValue={it.tom} placeholder={m?.tom_padrao || m?.tom_original || 'Tom'} aria-label="Tom"
           onBlur={e => e.target.value.trim() !== it.tom && onMudar({ tom: e.target.value.trim() })} />
@@ -150,7 +151,7 @@ function Item({ it, n, total, numero, data, musicas, porMomento, indicadas, onMu
       <input key={'o' + it.id + it.obs} defaultValue={it.obs} placeholder={ehAclamacao(it.momento) ? 'Antífona (V.) do dia' : 'Observação (opcional)'} style={{ margin: '0 0 4px' }}
         onBlur={e => e.target.value.trim() !== it.obs && onMudar({ obs: e.target.value.trim() })} />
       {ehAclamacao(it.momento) && <BuscarAntifona data={data} onAchou={v => onMudar({ obs: v })} />}
-      {marcadas.length === 0 && <div className="falta">Nenhuma música marcada para {it.momento}. Marque na aba Biblioteca, nos botões de momento de cada música.</div>}
+      {marcadas.length === 0 && <div className="falta">Nenhuma música marcada para {it.momento}{tempo ? ` que sirva no tempo ${tempo}` : ''}. Marque na aba Biblioteca, nos botões de momento (e de tempo) de cada música.</div>}
       {m && !m.cifra.trim() && <div className="falta">Esta música ainda não tem cifra na Biblioteca.</div>}
       {m && m.cifra.trim() && !m.tom_original && tomEfetivo && <div className="falta">Sem tom original na Biblioteca: a cifra não será transposta.</div>}
       {it.tom && !lerTom(it.tom) && <div className="falta">Não entendi o tom “{it.tom}”.</div>}
@@ -269,7 +270,7 @@ function Detalhe({ id, musicos, musicas, porMomento, indicadas, momentos, onFech
       {musicas.length === 0 && <p className="mut">A Biblioteca ainda está vazia: cadastre as músicas na aba Biblioteca para escolher aqui.</p>}
       <div>
         {itens.map((it, n) => (
-          <Item key={it.id} it={it} n={n} total={itens.length} data={c.data_hora} numero={numeroDe[it.momento.toLowerCase()]} musicas={musicas} porMomento={porMomento} indicadas={indicadas}
+          <Item key={it.id} it={it} n={n} total={itens.length} data={c.data_hora} tempo={c.tempo} numero={numeroDe[it.momento.toLowerCase()]} musicas={musicas} porMomento={porMomento} indicadas={indicadas}
             onMudar={campos => mudarItem(it, campos)} onTirar={() => tirar(it)} onDuplicar={() => inserir(it.momento, n)} />
         ))}
       </div>
@@ -325,7 +326,7 @@ export default function Missas() {
       supabase.from('missa_celebracoes').select('*').order('data_hora'),
       supabase.from('missa_itens').select('celebracao_id, momento, musica_id'),
       supabase.from('missa_musicos').select('*').order('nome'),
-      supabase.from('missa_musicas').select('id, nome, artista, cifra, tom_original, tom_padrao, capo').order('nome'),
+      supabase.from('missa_musicas').select('id, nome, artista, cifra, tom_original, tom_padrao, capo, tempos').order('nome'),
       supabase.from('missa_momentos').select('*').order('ordem'),
       supabase.from('missa_musicas_momentos').select('*')
     ]);

@@ -3,7 +3,7 @@ import { useEffect, useMemo, useState } from 'react';
 import { supabase } from '@/lib/supabase';
 import { gerarGrade, lerTom, letraDaCifra, nomeDoTom } from '@/lib/musica';
 import { lerPdfDeCifra } from '@/lib/pdfCifra';
-import { chave, simples, dataCurta } from '@/lib/util';
+import { chave, simples, dataCurta, TEMPOS_ESPECIFICOS } from '@/lib/util';
 import { ehConta } from '@/lib/conta';
 
 // Biblioteca de letras e cifras das missas: uma ficha por música (nome + artista).
@@ -135,6 +135,7 @@ export default function Biblioteca() {
   const [momentos, setMomentos] = useState([]);
   const [liga, setLiga] = useState(new Set()); // "musica_id:momento_id"
   const [momFiltro, setMomFiltro] = useState('');
+  const [tempoFiltro, setTempoFiltro] = useState('');
   const leitura = ehConta(); // amigos só consultam a Biblioteca
 
   const carregar = async () => {
@@ -170,6 +171,13 @@ export default function Biblioteca() {
   }
   const tirar = id => setImportados(x => x.filter(i => i.id !== id));
 
+  // Tempos litúrgicos da música (vazio = todos os tempos); grava na hora
+  async function mudarTempos(x, tempos) {
+    setFichas(fs => fs.map(f => f.id === x.id ? { ...f, tempos } : f));
+    const { error } = await supabase.from('missa_musicas').update({ tempos }).eq('id', x.id);
+    if (error) { alert('Não foi possível salvar o tempo: ' + error.message); carregar(); }
+  }
+
   // Marca ou desmarca o momento da música (grava na hora, como no Sonata)
   async function alternar(mid, moid) {
     const k = mid + ':' + moid; const tem = liga.has(k);
@@ -184,6 +192,8 @@ export default function Biblioteca() {
   const faltam = fichas.filter(x => usos[x.id] && !x.cifra.trim());
   const vis = fichas.filter(x => {
     if (t && !simples(x.nome + ' ' + x.artista).includes(t)) return false;
+    if (tempoFiltro === 'todos' && x.tempos?.length) return false;
+    if (tempoFiltro && tempoFiltro !== 'todos' && !(x.tempos || []).includes(tempoFiltro)) return false;
     if (momFiltro === 'nenhum' && momentos.some(m => liga.has(x.id + ':' + m.id))) return false;
     if (momFiltro && momFiltro !== 'nenhum' && !liga.has(x.id + ':' + momFiltro)) return false;
     if (filtro === 'faltando') return !x.cifra.trim() || !x.tom_original.trim();
@@ -226,6 +236,11 @@ export default function Biblioteca() {
           {momentos.map(m => <option key={m.id} value={m.id}>{m.nome}</option>)}
           <option value="nenhum">Sem momento marcado</option>
         </select>
+        <select value={tempoFiltro} onChange={e => setTempoFiltro(e.target.value)} style={{ flex: '0 1 220px' }}>
+          <option value="">Qualquer tempo</option>
+          <option value="todos">Só de todos os tempos</option>
+          {TEMPOS_ESPECIFICOS.map(t => <option key={t} value={t}>Só {t}</option>)}
+        </select>
       </div>
       {vis.length === 0 && <div className="card mut">{fichas.length ? 'Nenhuma música encontrada.' : (leitura ? 'A Biblioteca ainda está vazia.' : 'A Biblioteca está vazia. Importe PDFs do Cifra Club ou cadastre uma música.')}</div>}
       {vis.map(x => (
@@ -249,6 +264,18 @@ export default function Biblioteca() {
                 const on = liga.has(x.id + ':' + m.id);
                 return <button key={m.id} className={'chip' + (on ? ' on' : '')} onClick={() => alternar(x.id, m.id)}>{on ? '✓ ' : ''}{m.nome}</button>;
               })}
+          </div>
+          <div className="chips" aria-label="Tempos litúrgicos desta música" style={{ alignItems: 'center' }}>
+            <span className="mut" style={{ fontSize: '.85rem', marginRight: 2 }}>Tempos:</span>
+            {leitura
+              ? <span className={'chip' + (x.tempos?.length ? ' on' : '')} style={{ cursor: 'default' }}>{x.tempos?.length ? x.tempos.join(', ') : 'Todos os tempos'}</span>
+              : <>
+                <button className={'chip' + (x.tempos?.length ? '' : ' on')} onClick={() => mudarTempos(x, [])}>{x.tempos?.length ? '' : '✓ '}Todos</button>
+                {TEMPOS_ESPECIFICOS.map(t => {
+                  const on = (x.tempos || []).includes(t);
+                  return <button key={t} className={'chip' + (on ? ' on' : '')} onClick={() => mudarTempos(x, on ? x.tempos.filter(y => y !== t) : [...(x.tempos || []), t])}>{on ? '✓ ' : ''}{t}</button>;
+                })}
+              </>}
           </div>
           {x.obs && <div className="mut" style={{ fontSize: '.85rem', marginTop: 6 }}>{x.obs}</div>}
           {usos[x.id] && <div className="mut" style={{ fontSize: '.85rem', marginTop: 6 }}>Em: {usos[x.id].map(u => `${u.momento} (${dataCurta(u.data_hora)})`).join(', ')}</div>}
