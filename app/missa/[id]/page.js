@@ -233,8 +233,9 @@ export default function Cerimonia() {
             <div className="chips" style={{ marginTop: 6 }}>
               {i.tom && <Selo forte>Tom: {i.tom}</Selo>}
               {mostraCifra && i.capo > 0 && <Selo forte>Capotraste na {i.capo}ª casa</Selo>}
-              {i.obs && <Selo forte>{i.obs}</Selo>}
+              {i.obs && i.obs.length <= 40 && <Selo forte>{i.obs}</Selo>}
             </div>
+            {i.obs && i.obs.length > 40 && <p className="cer-obs">{/^aclama/i.test(i.momento) ? <><strong>V.</strong> </> : null}{i.obs}</p>}
             {ativo && (
               <div style={{ marginTop: 12 }}>
                 {mostraCifra && base && (

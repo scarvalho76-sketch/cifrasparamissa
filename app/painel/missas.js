@@ -3,7 +3,7 @@ import { useEffect, useMemo, useState } from 'react';
 import { supabase } from '@/lib/supabase';
 import { linkWhatsApp } from '@/lib/whatsapp';
 import { lerTom } from '@/lib/musica';
-import { dataLonga, dataCurta, fmtData, fmtHora, juntarDataHora, TEMPOS } from '@/lib/util';
+import { dataLonga, dataCurta, fmtData, fmtHora, juntarDataHora, TEMPOS, buscarLiturgia, ehAclamacao, tempoDaLiturgia } from '@/lib/util';
 import CampoDataHora from './campoData';
 import { linkPessoal } from './musicos';
 
@@ -18,7 +18,22 @@ function NovaMissa({ anteriores, onCriada, onCancelar }) {
   const ultimo = anteriores[0];
   const [f, setF] = useState({ data: '', hora: '', titulo: '', local: ultimo?.local || '', tempo: 'Tempo Comum', obs: '', base: '' });
   const [msg, setMsg] = useState('');
+  const [lit, setLit] = useState(null); // liturgia do dia (CNBB)
+  const [buscando, setBuscando] = useState(false);
   const set = k => e => setF({ ...f, [k]: e.target.value });
+
+  // Ao completar a data, consulta a Liturgia Diária e sugere celebração e tempo litúrgico
+  useEffect(() => {
+    const dia = juntarDataHora(f.data, f.hora || '12:00');
+    setLit(null);
+    if (!dia) return;
+    let vivo = true; setBuscando(true);
+    buscarLiturgia(dia).then(l => {
+      if (!vivo) return; setBuscando(false); setLit(l || false);
+      if (l) setF(x => ({ ...x, titulo: x.titulo || l.celebracao, tempo: tempoDaLiturgia(l) || x.tempo }));
+    });
+    return () => { vivo = false; };
+  }, [f.data]);
 
   async function criar() {
     setMsg('');
@@ -39,6 +54,10 @@ function NovaMissa({ anteriores, onCriada, onCancelar }) {
       itens = (data || []).filter(m => !(SEM_GLORIA.includes(f.tempo) && m.nome.trim().toLowerCase() === 'glória'))
         .map((m, i) => ({ celebracao_id: c.id, momento: m.nome, ordem: (i + 1) * 10 }));
     }
+    // Antífona da Aclamação ao Evangelho do dia (substitui a da missa copiada)
+    const verso = lit?.aclamacao?.verso;
+    // todas as linhas com os mesmos campos (o banco não aceita observação vazia como nula)
+    itens = itens.map(i => ({ ...i, obs: verso && ehAclamacao(i.momento) ? verso : (i.obs || '') }));
     if (itens.length) await supabase.from('missa_itens').insert(itens);
     onCriada(c.id);
   }
@@ -55,6 +74,9 @@ function NovaMissa({ anteriores, onCriada, onCancelar }) {
           <select value={f.tempo} onChange={set('tempo')} style={{ width: '100%' }}>{TEMPOS.map(t => <option key={t}>{t}</option>)}</select>
         </div>
       </div>
+      {buscando && <p className="mut" style={{ marginTop: -6 }}>Consultando a Liturgia Diária…</p>}
+      {lit && <p className="okmsg" style={{ marginTop: -6 }}>Liturgia Diária: {lit.celebracao}{lit.cor ? ` · cor ${lit.cor}` : ''}{lit.aclamacao?.verso ? ' · antífona da Aclamação encontrada' : ''}</p>}
+      {lit === false && <p className="mut" style={{ marginTop: -6 }}>Não foi possível consultar a Liturgia Diária deste dia; preencha à mão.</p>}
       <label>Começar com</label>
       <select value={f.base} onChange={set('base')} style={{ width: '100%' }}>
         <option value="">Os momentos automáticos (aba Momentos)</option>
@@ -71,7 +93,24 @@ function NovaMissa({ anteriores, onCriada, onCancelar }) {
   );
 }
 
-function Item({ it, n, total, numero, musicas, porMomento, indicadas, onMudar, onMover, onTirar, onDuplicar }) {
+// Busca na Liturgia Diária (CNBB) o verso da Aclamação ao Evangelho do dia da missa
+function BuscarAntifona({ data, onAchou }) {
+  const [estado, setEstado] = useState('');
+  async function buscar() {
+    setEstado('Consultando…');
+    const l = await buscarLiturgia(data);
+    if (!l?.aclamacao?.verso) return setEstado('Não encontrei a antífona deste dia.');
+    onAchou(l.aclamacao.verso); setEstado(`✓ ${l.aclamacao.referencia || 'Antífona do dia'}`);
+  }
+  return (
+    <div className="row" style={{ justifyContent: 'flex-start', gap: 6, marginBottom: 4 }}>
+      <button className="sec mini" onClick={buscar}>Buscar antífona do dia (CNBB)</button>
+      {estado && <span className={estado.startsWith('✓') ? 'okmsg' : 'mut'} style={{ fontSize: '.85rem' }}>{estado}</span>}
+    </div>
+  );
+}
+
+function Item({ it, n, total, numero, data, musicas, porMomento, indicadas, onMudar, onMover, onTirar, onDuplicar }) {
   const m = musicas.find(x => x.id === it.musica_id);
   // Só as músicas marcadas na Biblioteca para este momento
   const doMomento = indicadas[it.momento.toLowerCase()] || new Set();
@@ -107,8 +146,9 @@ function Item({ it, n, total, numero, musicas, porMomento, indicadas, onMudar, o
           {Array.from({ length: 9 }, (_, k) => k + 1).map(k => <option key={k} value={k}>{k}ª casa</option>)}
         </select>
       </div>
-      <input key={'o' + it.id} defaultValue={it.obs} placeholder="Observação (opcional)" style={{ margin: '0 0 4px' }}
+      <input key={'o' + it.id + it.obs} defaultValue={it.obs} placeholder={ehAclamacao(it.momento) ? 'Antífona (V.) do dia' : 'Observação (opcional)'} style={{ margin: '0 0 4px' }}
         onBlur={e => e.target.value.trim() !== it.obs && onMudar({ obs: e.target.value.trim() })} />
+      {ehAclamacao(it.momento) && <BuscarAntifona data={data} onAchou={v => onMudar({ obs: v })} />}
       {marcadas.length === 0 && <div className="falta">Nenhuma música marcada para {it.momento}. Marque na aba Biblioteca, nos botões de momento de cada música.</div>}
       {m && !m.cifra.trim() && <div className="falta">Esta música ainda não tem cifra na Biblioteca.</div>}
       {m && m.cifra.trim() && !m.tom_original && tomEfetivo && <div className="falta">Sem tom original na Biblioteca: a cifra não será transposta.</div>}
@@ -228,7 +268,7 @@ function Detalhe({ id, musicos, musicas, porMomento, indicadas, momentos, onFech
       {musicas.length === 0 && <p className="mut">A Biblioteca ainda está vazia: cadastre as músicas na aba Biblioteca para escolher aqui.</p>}
       <div>
         {itens.map((it, n) => (
-          <Item key={it.id} it={it} n={n} total={itens.length} numero={numeroDe[it.momento.toLowerCase()]} musicas={musicas} porMomento={porMomento} indicadas={indicadas}
+          <Item key={it.id} it={it} n={n} total={itens.length} data={c.data_hora} numero={numeroDe[it.momento.toLowerCase()]} musicas={musicas} porMomento={porMomento} indicadas={indicadas}
             onMudar={campos => mudarItem(it, campos)} onMover={d => mover(n, d)} onTirar={() => tirar(it)} onDuplicar={() => inserir(it.momento, n)} />
         ))}
       </div>
