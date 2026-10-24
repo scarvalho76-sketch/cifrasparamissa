@@ -3,6 +3,7 @@ import { useEffect, useRef, useState } from 'react';
 import { useParams } from 'next/navigation';
 import { supabase } from '@/lib/supabase';
 import { dataLonga, dataHoraCurta, dataIso, simples } from '@/lib/util';
+import ConviteBotao from '@/components/ConviteBotao';
 import { transporCifra, distancia, nomeDoTom, lerTom, gerarGrade, letraDaCifra } from '@/lib/musica';
 
 // Modo celebração: só aquela missa, momento a momento (adaptado do Modo cerimônia do Sonata Casamentos).
@@ -153,6 +154,7 @@ function Selo({ children, forte }) {
 export default function Cerimonia() {
   const { id: escala } = useParams();
   const [token, setToken] = useState(null);
+  const [convite, setConvite] = useState(null); // link de convidado (vale só no dia)
   const [d, setD] = useState(undefined);
   const [erro, setErro] = useState('');
   const [online, setOnline] = useState(true);
@@ -197,9 +199,9 @@ export default function Cerimonia() {
   }
 
   // Biblioteca para a música avulsa: consultada com internet e guardada no aparelho
-  async function carregarBiblioteca(tk) {
+  async function carregarBiblioteca(tk, cv) {
     try {
-      const { data, error } = await supabase.rpc('missa_biblioteca', { p_token: tk });
+      const { data, error } = await supabase.rpc('missa_biblioteca', { p_token: tk, p_convite: cv || null });
       if (error || !Array.isArray(data)) return;
       setBiblioteca(data);
       try { localStorage.setItem('missa:biblioteca', JSON.stringify(data)); } catch {}
@@ -220,11 +222,15 @@ export default function Cerimonia() {
       try {
         let tk = null; try { tk = localStorage.getItem('missa:token'); } catch {}
         setToken(tk);
-        const { data, error } = await supabase.rpc('missa_dados', { p_id: escala, p_token: tk });
+        // convidado: código do link (?c=...), guardado no aparelho para abrir de novo
+        let cv = new URLSearchParams(location.search).get('c');
+        try { if (cv) localStorage.setItem('missa:convite:' + escala, cv); else cv = localStorage.getItem('missa:convite:' + escala); } catch {}
+        setConvite(cv);
+        const { data, error } = await supabase.rpc('missa_dados', { p_id: escala, p_token: tk, p_convite: cv || null });
         if (error) throw error;
         setD(data); gravarLocal(escala, data); setErro('');
         carregarLeituras(data.data_hora);
-        carregarBiblioteca(tk);
+        carregarBiblioteca(tk, cv);
       } catch (e) {
         if (!local) setErro(navigator.onLine ? (e.message || 'Não foi possível abrir.') : 'Sem internet e esta missa ainda não foi guardada neste aparelho.');
       }
@@ -235,11 +241,11 @@ export default function Cerimonia() {
   async function baixar() {
     setMsg(''); setBaixando(true);
     try {
-      const { data, error } = await supabase.rpc('missa_dados', { p_id: escala, p_token: token });
+      const { data, error } = await supabase.rpc('missa_dados', { p_id: escala, p_token: token, p_convite: convite });
       if (error) throw error;
       setD(data); gravarLocal(escala, data);
       await carregarLeituras(data.data_hora);
-      await carregarBiblioteca(token);
+      await carregarBiblioteca(token, convite);
       await guardarPagina();
       try { localStorage.setItem(chaveLocal(escala) + ':pagina', '1'); } catch {}
       setBaixado(true); setMsg('Pronto: esta missa abre neste aparelho mesmo sem internet.');
@@ -265,7 +271,7 @@ export default function Cerimonia() {
   if (!d) return (
     <div className="wrap"><div className="card" style={{ marginTop: 24 }}>
       <h1>Modo celebração</h1><p className="err">{erro}</p>
-      <p className="mut">Abra pelo seu link pessoal, com internet, e toque em “Baixar para usar sem internet”.</p>
+      <p className="mut">{convite ? 'Peça um novo link a quem compartilhou esta missa.' : 'Abra pelo seu link pessoal, com internet, e toque em “Baixar para usar sem internet”.'}</p>
     </div></div>
   );
 
@@ -301,7 +307,8 @@ export default function Cerimonia() {
       <div className="card">
         <div className="mut">{dt(d.data_hora)}</div>
         <h1 style={{ marginTop: 4 }}>{d.titulo || 'Missa'}</h1>
-        <div className="mut">{[d.local, d.tempo].filter(Boolean).join(' · ')}{instr ? ` · ${d.musico} (${instr})` : ''}</div>
+        <div className="mut">{[d.local, d.tempo].filter(Boolean).join(' · ')}{instr ? ` · ${d.musico} (${instr})` : ''}{d.convidado ? ' · acesso de convidado (só hoje)' : ''}</div>
+        {d.pode_convidar && <div style={{ marginTop: 8 }}><ConviteBotao missaId={d.id} dataHora={d.data_hora} titulo={d.titulo} /></div>}
         <div className="row" style={{ marginTop: 10 }}>
           <span className={baixado ? 'okmsg' : 'mut'} style={{ fontSize: '.9rem' }}>
             {baixado ? '✓ Disponível sem internet' : 'Ainda não guardada para uso sem internet'}
@@ -438,7 +445,7 @@ export default function Cerimonia() {
         );
       })}
       {d.obs && <div className="card"><strong>Observações</strong><p style={{ whiteSpace: 'pre-wrap', margin: '6px 0 0' }}>{d.obs}</p></div>}
-      <button type="button" className="sec cer-prox" style={{ marginTop: 8 }} onClick={sair}>◂ Sair do modo celebração</button>
+      {!d.convidado && <button type="button" className="sec cer-prox" style={{ marginTop: 8 }} onClick={sair}>◂ Sair do modo celebração</button>}
     </div>
   );
 }

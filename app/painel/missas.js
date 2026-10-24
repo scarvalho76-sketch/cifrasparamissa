@@ -7,6 +7,7 @@ import { dataLonga, dataCurta, fmtData, fmtHora, juntarDataHora, TEMPOS, buscarL
 import CampoDataHora from './campoData';
 import LeiturasDoDia from './leituras';
 import { ehConta } from '@/lib/conta';
+import ConviteBotao from '@/components/ConviteBotao';
 import { linkPessoal } from './musicos';
 
 const SEM_GLORIA = ['Advento', 'Quaresma'];
@@ -248,7 +249,10 @@ function Detalhe({ id, musicos, musicas, porMomento, indicadas, momentos, onFech
           <h1 style={{ marginTop: 2 }}>{c.titulo || 'Missa'}</h1>
           <div className="mut">{[c.local, c.tempo].filter(Boolean).join(' · ')}</div>
           {c.obs && <p style={{ margin: '6px 0 0' }}>{c.obs}</p>}
-          <button className="sec mini" style={{ marginTop: 8 }} onClick={() => { setF({ ...c, data: fmtData(c.data_hora), hora: fmtHora(c.data_hora) }); setEditando(true); }}>Editar dados</button>
+          <div className="row" style={{ justifyContent: 'flex-start', gap: 6, marginTop: 8 }}>
+            <button className="sec mini" onClick={() => { setF({ ...c, data: fmtData(c.data_hora), hora: fmtHora(c.data_hora) }); setEditando(true); }}>Editar dados</button>
+            <ConviteBotao missaId={id} dataHora={c.data_hora} titulo={c.titulo} />
+          </div>
         </div>
       ) : (
         <div style={{ marginTop: 12 }}>
