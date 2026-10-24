@@ -2,6 +2,7 @@
 import { useEffect, useState } from 'react';
 import { useRouter } from 'next/navigation';
 import { supabase } from '@/lib/supabase';
+import { lerConta } from '@/lib/conta';
 
 // Entrada do administrador (mesmo e-mail e senha do Sonata Casamentos).
 // Músicos não passam por aqui: entram pelo link pessoal.
@@ -22,6 +23,7 @@ export default function Login() {
     setErro('Este acesso não é de administrador.'); setPronto(true);
   }
   useEffect(() => {
+    if (lerConta()) { r.replace('/painel'); return; }
     (async () => {
       const { data: { session } } = await supabase.auth.getSession();
       const querEntrar = new URLSearchParams(location.search).has('entrar');

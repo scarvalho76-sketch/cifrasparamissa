@@ -62,7 +62,7 @@ export default function Musicos() {
         {!f && <button className="sec" onClick={() => setF({ nome: '', telefone: '', instrumento: '' })}>+ Novo músico</button>}
       </div>
       {f && !f.id && Form()}
-      {lista.length === 0 && !f && <div className="card mut">Nenhum músico cadastrado. Você não precisa se cadastrar: o seu acesso é o de administrador.</div>}
+      {lista.length === 0 && !f && <div className="card mut">Nenhum músico cadastrado. Você não precisa se cadastrar aqui: você já entra no painel com o seu próprio acesso.</div>}
       {lista.map(m => f?.id === m.id ? <div key={m.id}>{Form()}</div> : (
         <div key={m.id} className={'card' + (m.ativo ? '' : ' off')}>
           <div className="row">

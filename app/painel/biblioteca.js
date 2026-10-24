@@ -4,6 +4,7 @@ import { supabase } from '@/lib/supabase';
 import { gerarGrade, lerTom, letraDaCifra, nomeDoTom } from '@/lib/musica';
 import { lerPdfDeCifra } from '@/lib/pdfCifra';
 import { chave, simples, dataCurta } from '@/lib/util';
+import { ehConta } from '@/lib/conta';
 
 // Biblioteca de letras e cifras das missas: uma ficha por música (nome + artista).
 // Mesma lógica do Sonata Casamentos: cifra única, letra tirada da cifra, transposição pelo tom original.
@@ -116,7 +117,7 @@ function Editor({ ficha, inicial, onSalvo, onCancelar, existentes }) {
           <button onClick={salvar}>Salvar</button>
           <button className="sec" onClick={onCancelar}>Cancelar</button>
         </span>
-        {f.id && <button className="sec" style={{ color: 'var(--bad)', borderColor: 'var(--bad)' }} onClick={excluir}>Excluir</button>}
+        {f.id && !ehConta() && <button className="sec" style={{ color: 'var(--bad)', borderColor: 'var(--bad)' }} onClick={excluir}>Excluir</button>}
       </div>
     </div>
   );
