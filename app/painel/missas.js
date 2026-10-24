@@ -3,12 +3,11 @@ import { useEffect, useMemo, useState } from 'react';
 import { supabase } from '@/lib/supabase';
 import { linkWhatsApp } from '@/lib/whatsapp';
 import { lerTom } from '@/lib/musica';
-import { dataLonga, dataCurta, TEMPOS } from '@/lib/util';
+import { dataLonga, dataCurta, fmtData, fmtHora, juntarDataHora, TEMPOS } from '@/lib/util';
+import CampoDataHora from './campoData';
 import { linkPessoal } from './musicos';
 
 const SEM_GLORIA = ['Advento', 'Quaresma'];
-// valor para <input type="datetime-local"> no horário do aparelho
-const paraInput = s => { const d = new Date(s); d.setMinutes(d.getMinutes() - d.getTimezoneOffset()); return d.toISOString().slice(0, 16); };
 
 // Grava a ordem atual dos itens (10, 20, 30…)
 async function renumerar(itens) {
@@ -17,15 +16,16 @@ async function renumerar(itens) {
 
 function NovaMissa({ anteriores, onCriada, onCancelar }) {
   const ultimo = anteriores[0];
-  const [f, setF] = useState({ data_hora: '', titulo: '', local: ultimo?.local || '', tempo: 'Tempo Comum', obs: '', base: '' });
+  const [f, setF] = useState({ data: '', hora: '', titulo: '', local: ultimo?.local || '', tempo: 'Tempo Comum', obs: '', base: '' });
   const [msg, setMsg] = useState('');
   const set = k => e => setF({ ...f, [k]: e.target.value });
 
   async function criar() {
     setMsg('');
-    if (!f.data_hora) return setMsg('Informe a data e o horário.');
+    const quando = juntarDataHora(f.data, f.hora);
+    if (!quando) return setMsg('Informe a data (dd/mm/aaaa) e a hora (hh:mm).');
     const { data: c, error } = await supabase.from('missa_celebracoes')
-      .insert({ data_hora: new Date(f.data_hora).toISOString(), titulo: f.titulo.trim(), local: f.local.trim(), tempo: f.tempo, obs: f.obs.trim() })
+      .insert({ data_hora: quando.toISOString(), titulo: f.titulo.trim(), local: f.local.trim(), tempo: f.tempo, obs: f.obs.trim() })
       .select().single();
     if (error) return setMsg('Não foi possível criar: ' + error.message);
     let itens = [];
@@ -47,7 +47,7 @@ function NovaMissa({ anteriores, onCriada, onCancelar }) {
     <div className="card">
       <h2>Nova missa</h2>
       <div className="grade2">
-        <div><label>Data e horário</label><input type="datetime-local" value={f.data_hora} onChange={set('data_hora')} /></div>
+        <CampoDataHora data={f.data} hora={f.hora} onData={v => setF(x => ({ ...x, data: v }))} onHora={v => setF(x => ({ ...x, hora: v }))} />
         <div><label>Igreja / comunidade</label><input value={f.local} onChange={set('local')} /></div>
         <div><label>Celebração (opcional)</label><input value={f.titulo} onChange={set('titulo')} placeholder="Ex.: 30º Domingo do Tempo Comum" /></div>
         <div>
@@ -171,8 +171,9 @@ function Detalhe({ id, musicos, musicas, porMomento, indicadas, momentos, onFech
   }
   async function salvarDados() {
     setMsg('');
-    if (!f.data_hora) return setMsg('Informe a data e o horário.');
-    const { error } = await supabase.from('missa_celebracoes').update({ data_hora: new Date(f.data_hora).toISOString(), titulo: f.titulo.trim(), local: f.local.trim(), tempo: f.tempo, obs: f.obs.trim() }).eq('id', id);
+    const quando = juntarDataHora(f.data, f.hora);
+    if (!quando) return setMsg('Informe a data (dd/mm/aaaa) e a hora (hh:mm).');
+    const { error } = await supabase.from('missa_celebracoes').update({ data_hora: quando.toISOString(), titulo: f.titulo.trim(), local: f.local.trim(), tempo: f.tempo, obs: f.obs.trim() }).eq('id', id);
     if (error) return setMsg('Não foi possível salvar: ' + error.message);
     setEditando(false); carregar(); onMudou();
   }
@@ -199,12 +200,12 @@ function Detalhe({ id, musicos, musicas, porMomento, indicadas, momentos, onFech
           <h1 style={{ marginTop: 2 }}>{c.titulo || 'Missa'}</h1>
           <div className="mut">{[c.local, c.tempo].filter(Boolean).join(' · ')}</div>
           {c.obs && <p style={{ margin: '6px 0 0' }}>{c.obs}</p>}
-          <button className="sec mini" style={{ marginTop: 8 }} onClick={() => { setF({ ...c, data_hora: paraInput(c.data_hora) }); setEditando(true); }}>Editar dados</button>
+          <button className="sec mini" style={{ marginTop: 8 }} onClick={() => { setF({ ...c, data: fmtData(c.data_hora), hora: fmtHora(c.data_hora) }); setEditando(true); }}>Editar dados</button>
         </div>
       ) : (
         <div style={{ marginTop: 12 }}>
           <div className="grade2">
-            <div><label>Data e horário</label><input type="datetime-local" value={f.data_hora} onChange={e => setF({ ...f, data_hora: e.target.value })} /></div>
+            <CampoDataHora data={f.data} hora={f.hora} onData={v => setF(x => ({ ...x, data: v }))} onHora={v => setF(x => ({ ...x, hora: v }))} />
             <div><label>Igreja / comunidade</label><input value={f.local} onChange={e => setF({ ...f, local: e.target.value })} /></div>
             <div><label>Celebração</label><input value={f.titulo} onChange={e => setF({ ...f, titulo: e.target.value })} /></div>
             <div><label>Tempo litúrgico</label><select value={f.tempo} onChange={e => setF({ ...f, tempo: e.target.value })} style={{ width: '100%' }}>{[...new Set([...TEMPOS, f.tempo].filter(Boolean))].map(t => <option key={t}>{t}</option>)}</select></div>

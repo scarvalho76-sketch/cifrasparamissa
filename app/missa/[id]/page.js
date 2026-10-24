@@ -2,6 +2,7 @@
 import { useEffect, useRef, useState } from 'react';
 import { useParams } from 'next/navigation';
 import { supabase } from '@/lib/supabase';
+import { dataLonga, dataHoraCurta } from '@/lib/util';
 import { transporCifra, distancia, nomeDoTom, lerTom, gerarGrade, letraDaCifra } from '@/lib/musica';
 
 // Modo celebração: só aquela missa, momento a momento (adaptado do Modo cerimônia do Sonata Casamentos).
@@ -10,8 +11,8 @@ import { transporCifra, distancia, nomeDoTom, lerTom, gerarGrade, letraDaCifra }
 
 const CACHE = 'missa-celebracao-v1';
 const chaveLocal = id => 'missa:' + id;
-const dt = s => { const t = new Date(s).toLocaleString('pt-BR', { weekday: 'long', day: '2-digit', month: 'long', hour: '2-digit', minute: '2-digit' }); return t.charAt(0).toUpperCase() + t.slice(1); };
-const quando = s => new Date(s).toLocaleString('pt-BR', { dateStyle: 'short', timeStyle: 'short' });
+const dt = dataLonga;
+const quando = dataHoraCurta;
 const partes = i => String(i || '').split(/\s+e\s+/i).map(s => s.trim()).filter(Boolean);
 const tocaAlgo = i => partes(i).some(p => !/voz/i.test(p));
 
