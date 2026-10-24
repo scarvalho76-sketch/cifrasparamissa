@@ -81,11 +81,13 @@ export default function Cerimonia() {
   const [ajustes, setAjustes] = useState({});
   const [fonte, setFonte] = useState(1);
   const [formato, setFormato] = useState(null);
+  const [usaCapo, setUsaCapo] = useState(null);
   useTelaAcesa();
   useEffect(() => {
     setAjustes(lerPref(chaveLocal(escala) + ':ajustes', {}));
     setFonte(lerPref('missa:fonte', 1));
     setFormato(lerPref('missa:formato', null));
+    setUsaCapo(lerPref('missa:capo', null));
   }, [escala]);
   const ajustar = (id, delta) => {
     const novo = { ...ajustes, [id]: delta === null ? 0 : (ajustes[id] || 0) + delta };
@@ -93,6 +95,7 @@ export default function Cerimonia() {
   };
   const mudarFonte = delta => { const v = Math.min(2, Math.max(0.7, Math.round((fonte + delta) * 10) / 10)); setFonte(v); gravarPref('missa:fonte', v); };
   const mudarFormato = v => { setFormato(v); gravarPref('missa:formato', v); };
+  const mudarCapo = v => { setUsaCapo(v); gravarPref('missa:capo', v); };
 
   useEffect(() => {
     const local = lerLocal(escala);
@@ -157,6 +160,10 @@ export default function Cerimonia() {
   const visao = formato || padrao;
   const mostraCifra = visao !== 'letra';
   const itens = d.itens || [];
+  // Capotraste: quem toca violão vê as formas dos acordes com o capo; tecladista vê a cifra no tom real
+  const soTeclado = /teclado|piano|órg[aã]o|orgao/i.test(instr || '') && !/viol/i.test(instr || '');
+  const comCapo = usaCapo ?? !soTeclado;
+  const algumCapo = mostraCifra && itens.some(i => i.capo > 0);
 
   return (
     <div className="wrap cer">
@@ -183,6 +190,13 @@ export default function Cerimonia() {
             ))}
           </span>
         </div>
+        {algumCapo && (
+          <div className="row" style={{ marginTop: 10, justifyContent: 'flex-start' }}>
+            <span className="mut" style={{ fontSize: '.9rem' }}>Capotraste</span>
+            <button type="button" className={'cer-mini' + (comCapo ? '' : ' sec')} onClick={() => mudarCapo(true)}>Usar (violão)</button>
+            <button type="button" className={'cer-mini' + (comCapo ? ' sec' : '')} onClick={() => mudarCapo(false)}>Sem capo (teclado)</button>
+          </div>
+        )}
       </div>
 
       {itens.map((i, n) => {
@@ -191,13 +205,16 @@ export default function Cerimonia() {
         const ajuste = ajustes[i.id] || 0;
         const total = (auto || 0) + ajuste;
         const destino = i.tom_original ? nomeDoTom(i.tom_original, total) : null;
+        // com capotraste, os acordes mostrados são as formas: tom real menos as casas do capo
+        const capo = mostraCifra && comCapo ? (i.capo || 0) : 0;
+        const forma = i.tom_original ? nomeDoTom(i.tom_original, total - capo) : null;
         // Grade: a cadastrada na Biblioteca; se não houver, gerada na hora a partir da cifra
         const querGrade = visao === 'grade';
         const gradeAuto = querGrade && !i.grade && i.cifra ? gerarGrade(i.cifra) : '';
         // letra: a cadastrada; se não houver, a própria cifra sem as linhas de acordes
         const letraVista = i.letra || letraDaCifra(i.cifra);
         const base = mostraCifra ? (querGrade ? (i.grade || gradeAuto || i.cifra) : i.cifra) : letraVista;
-        const texto = mostraCifra ? transporCifra(base, total, ajuste === 0 && auto !== null ? i.tom : destino) : base;
+        const texto = mostraCifra ? transporCifra(base, total - capo, capo ? forma : (ajuste === 0 && auto !== null ? i.tom : destino)) : base;
         const falta = !i.nome ? 'Nenhuma música escolhida para este momento.' : mostraCifra ? 'A cifra desta música ainda não foi cadastrada.' : 'A letra desta música ainda não foi cadastrada.';
         let aviso = '';
         if (mostraCifra && i.cifra && i.tom && !i.tom_original) aviso = 'O tom original desta cifra não foi cadastrado, por isso ela não foi transposta automaticamente. Use os botões de meio tom se precisar.';
@@ -215,6 +232,7 @@ export default function Cerimonia() {
             </button>
             <div className="chips" style={{ marginTop: 6 }}>
               {i.tom && <Selo forte>Tom: {i.tom}</Selo>}
+              {mostraCifra && i.capo > 0 && <Selo forte>Capotraste na {i.capo}ª casa</Selo>}
               {i.obs && <Selo forte>{i.obs}</Selo>}
             </div>
             {ativo && (
@@ -222,8 +240,9 @@ export default function Cerimonia() {
                 {mostraCifra && base && (
                   <div className="row" style={{ marginBottom: 8 }}>
                     <span style={{ fontSize: '.9rem' }}>
-                      {destino ? <>Cifra em <strong>{destino}</strong></> : (total ? <>Cifra ajustada <strong>{meioTom(total)}</strong></> : 'Cifra no tom original')}
-                      {auto ? <span className="mut"> · transposta de {i.tom_original}</span> : null}
+                      {capo ? <>Capo na <strong>{capo}ª casa</strong> · formas de <strong>{forma || '?'}</strong>{destino ? <span className="mut"> · soa em {destino}</span> : null}</>
+                        : destino ? <>Cifra em <strong>{destino}</strong></> : (total ? <>Cifra ajustada <strong>{meioTom(total)}</strong></> : 'Cifra no tom original')}
+                      {auto && !capo ? <span className="mut"> · transposta de {i.tom_original}</span> : null}
                       {ajuste ? <span className="mut"> · ajuste manual {meioTom(ajuste)}</span> : null}
                     </span>
                     <span className="row" style={{ gap: 6 }}>

@@ -1,19 +1,19 @@
 'use client';
 import { useEffect, useMemo, useState } from 'react';
 import { supabase } from '@/lib/supabase';
-import { gerarGrade, lerTom, letraDaCifra } from '@/lib/musica';
+import { gerarGrade, lerTom, letraDaCifra, nomeDoTom } from '@/lib/musica';
 import { lerPdfDeCifra } from '@/lib/pdfCifra';
 import { chave, simples, dataCurta } from '@/lib/util';
 
 // Biblioteca de letras e cifras das missas: uma ficha por música (nome + artista).
 // Mesma lógica do Sonata Casamentos: cifra única, letra tirada da cifra, transposição pelo tom original.
 const mono = { fontFamily: 'ui-monospace, SFMono-Regular, Menlo, Consolas, monospace', fontSize: '.9rem', lineHeight: 1.45, whiteSpace: 'pre', overflowX: 'auto' };
-const vazio = { nome: '', artista: '', tom_original: '', tom_padrao: '', letra: '', cifra: '', grade: '', obs: '' };
+const vazio = { nome: '', artista: '', tom_original: '', tom_padrao: '', capo: 0, letra: '', cifra: '', grade: '', obs: '' };
 
 function Editor({ ficha, inicial, onSalvo, onCancelar, existentes }) {
   const [f, setF] = useState(() => ({
     ...vazio, ...(ficha || {}),
-    ...(inicial ? { nome: inicial.nome || '', artista: inicial.artista || '', cifra: inicial.cifra || '', tom_original: inicial.tom || '', letra: '' } : {})
+    ...(inicial ? { nome: inicial.nome || '', artista: inicial.artista || '', cifra: inicial.cifra || '', tom_original: inicial.tom || '', capo: inicial.capo || 0, tom_padrao: inicial.tomReal || '', letra: '' } : {})
   }));
   const [msg, setMsg] = useState(inicial && !inicial.tom ? 'Não encontrei o tom no PDF: preencha o tom original.' : '');
   const [lendo, setLendo] = useState(false);
@@ -27,7 +27,7 @@ function Editor({ ficha, inicial, onSalvo, onCancelar, existentes }) {
     setMsg(''); setLendo(true);
     try {
       const r = await lerPdfDeCifra(arq);
-      setF({ ...f, nome: f.nome || r.nome || '', artista: f.artista || r.artista || '', cifra: r.cifra, letra: '', tom_original: r.tom || f.tom_original });
+      setF({ ...f, nome: f.nome || r.nome || '', artista: f.artista || r.artista || '', cifra: r.cifra, letra: '', tom_original: r.tom || f.tom_original, ...(r.capo ? { capo: r.capo, tom_padrao: f.tom_padrao || r.tomReal || '' } : {}) });
       setMsg(r.tom ? '' : 'PDF lido. Não encontrei o tom no arquivo: preencha o tom original.');
     } catch (err) { setMsg('Não foi possível ler o PDF: ' + err.message); }
     setLendo(false);
@@ -40,7 +40,7 @@ function Editor({ ficha, inicial, onSalvo, onCancelar, existentes }) {
     const outra = existentes?.[k];
     if (outra && outra.id !== f.id && !confirm('Já existe uma ficha com este nome e artista. Substituir pelo que está aqui?')) return;
     const dados = {
-      nome: f.nome.trim(), artista: f.artista.trim(), tom_original: f.tom_original.trim(), tom_padrao: f.tom_padrao.trim(),
+      nome: f.nome.trim(), artista: f.artista.trim(), tom_original: f.tom_original.trim(), tom_padrao: f.tom_padrao.trim(), capo: Number(f.capo) || 0,
       letra: f.letra.replace(/\s+$/, ''), cifra: f.cifra.replace(/\s+$/, ''), grade: f.grade.replace(/\s+$/, ''), obs: f.obs.trim(),
       atualizado_em: new Date().toISOString()
     };
@@ -85,6 +85,16 @@ function Editor({ ficha, inicial, onSalvo, onCancelar, existentes }) {
           {tomInvalido(f.tom_padrao) && <p className="err" style={{ marginTop: -8 }}>Não entendi este tom.</p>}
         </div>
       </div>
+      <label>Capotraste no violão (quando necessário)</label>
+      <div className="row" style={{ justifyContent: 'flex-start', marginBottom: 4 }}>
+        <select value={f.capo || 0} onChange={e => setF({ ...f, capo: Number(e.target.value) })} style={{ margin: 0 }}>
+          <option value={0}>Sem capotraste</option>
+          {Array.from({ length: 9 }, (_, k) => k + 1).map(k => <option key={k} value={k}>{k}ª casa</option>)}
+        </select>
+        {f.capo > 0 && lerTom(f.tom_padrao || f.tom_original) && <span className="mut" style={{ fontSize: '.9rem' }}>
+          Tocando em {f.tom_padrao || f.tom_original}, o violão faz as formas de <strong>{nomeDoTom(f.tom_padrao || f.tom_original, -f.capo)}</strong>.</span>}
+      </div>
+      <p className="mut" style={{ fontSize: '.85rem', margin: '0 0 12px' }}>No Modo celebração, quem toca violão vê os acordes já nas formas para o capotraste; quem toca teclado vê no tom real.</p>
       <details style={{ margin: '0 0 12px' }} open={!!f.letra}>
         <summary className="mut" style={{ fontSize: '.9rem' }}>Letra para quem só canta: {f.letra.trim() ? 'personalizada' : 'tirada automaticamente da cifra'}</summary>
         <p className="mut" style={{ fontSize: '.85rem', margin: '6px 0' }}>Deixe vazio para usar a letra da própria cifra, sem os acordes.</p>
@@ -280,6 +290,7 @@ export default function Biblioteca() {
             {selo(!!x.cifra.trim(), 'Cifra')}{x.grade && selo(true, 'Grade')}
             {x.tom_original ? <span className="chip" style={{ cursor: 'default' }}>Tom original: {x.tom_original}</span> : selo(false, 'Tom original')}
             {x.tom_padrao && <span className="chip on" style={{ cursor: 'default' }}>Eu canto em: {x.tom_padrao}</span>}
+            {x.capo > 0 && <span className="chip on" style={{ cursor: 'default' }}>Capo {x.capo}ª casa</span>}
           </div>
           <div className="chips" aria-label="Momentos desta música" style={{ alignItems: 'center', borderTop: '1px dashed var(--line)', paddingTop: 8 }}>
             <span className="mut" style={{ fontSize: '.85rem', marginRight: 2 }}>Momentos:</span>

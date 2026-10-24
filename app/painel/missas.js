@@ -30,7 +30,7 @@ function NovaMissa({ anteriores, onCriada, onCancelar }) {
     if (error) return setMsg('Não foi possível criar: ' + error.message);
     let itens = [];
     if (f.base) {
-      const { data } = await supabase.from('missa_itens').select('momento, ordem, musica_id, tom, obs').eq('celebracao_id', f.base).order('ordem');
+      const { data } = await supabase.from('missa_itens').select('momento, ordem, musica_id, tom, obs, capo').eq('celebracao_id', f.base).order('ordem');
       itens = (data || []).map(i => ({ ...i, celebracao_id: c.id }));
       const { data: esc } = await supabase.from('missa_escalas').select('musico_id, instrumento').eq('celebracao_id', f.base);
       if (esc?.length) await supabase.from('missa_escalas').insert(esc.map(e => ({ ...e, celebracao_id: c.id })));
@@ -98,6 +98,14 @@ function Item({ it, n, total, numero, musicas, porMomento, indicadas, onMudar, o
         </select>
         <input key={'t' + it.id + it.musica_id} defaultValue={it.tom} placeholder={m?.tom_padrao || m?.tom_original || 'Tom'} aria-label="Tom"
           onBlur={e => e.target.value.trim() !== it.tom && onMudar({ tom: e.target.value.trim() })} />
+      </div>
+      <div className="row" style={{ justifyContent: 'flex-start', gap: 6, marginBottom: 4 }}>
+        <span className="mut" style={{ fontSize: '.85rem' }}>Capotraste</span>
+        <select value={it.capo ?? ''} onChange={e => onMudar({ capo: e.target.value === '' ? null : Number(e.target.value) })} style={{ margin: 0, padding: '4px 8px' }} aria-label="Capotraste nesta missa">
+          <option value="">{m?.capo ? `Da música (${m.capo}ª casa)` : 'Da música (sem capo)'}</option>
+          <option value={0}>Sem capotraste</option>
+          {Array.from({ length: 9 }, (_, k) => k + 1).map(k => <option key={k} value={k}>{k}ª casa</option>)}
+        </select>
       </div>
       <input key={'o' + it.id} defaultValue={it.obs} placeholder="Observação (opcional)" style={{ margin: '0 0 4px' }}
         onBlur={e => e.target.value.trim() !== it.obs && onMudar({ obs: e.target.value.trim() })} />
@@ -274,7 +282,7 @@ export default function Missas() {
       supabase.from('missa_celebracoes').select('*').order('data_hora'),
       supabase.from('missa_itens').select('celebracao_id, momento, musica_id'),
       supabase.from('missa_musicos').select('*').order('nome'),
-      supabase.from('missa_musicas').select('id, nome, artista, cifra, tom_original, tom_padrao').order('nome'),
+      supabase.from('missa_musicas').select('id, nome, artista, cifra, tom_original, tom_padrao, capo').order('nome'),
       supabase.from('missa_momentos').select('*').order('ordem'),
       supabase.from('missa_musicas_momentos').select('*')
     ]);
