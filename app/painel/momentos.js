@@ -40,11 +40,13 @@ export default function Momentos() {
   return (
     <>
       <h2>Momentos da missa</h2>
-      <p className="mut">Os momentos marcados como <strong>automáticos</strong> entram em cada missa nova, nesta ordem. Os outros ficam disponíveis para acrescentar quando precisar (por exemplo, sem Glória no Advento e na Quaresma, basta tirá-lo daquela missa).</p>
+      <p className="mut">Os momentos marcados como <strong>automáticos</strong> entram em cada missa nova, nesta ordem. Os outros ficam disponíveis para acrescentar quando precisar. O <strong>número</strong> é fixo: se um momento não acontece (o Glória no Advento, por exemplo), os outros mantêm o seu número. Deixe o número vazio nos momentos que não são numerados.</p>
       <div className="card">
         {lista.map((m, n) => (
           <div key={m.id} className="item" style={{ opacity: m.ativo ? 1 : .5 }}>
             <div className="item-cab">
+              <input defaultValue={m.numero ?? ''} placeholder="nº" inputMode="numeric" aria-label="Número do momento" style={{ margin: 0, width: 56, textAlign: 'center' }}
+                onBlur={e => { const v = e.target.value.replace(/\D/g, ''); const novo = v ? Number(v) : null; if (novo !== (m.numero ?? null)) salvar(m, { numero: novo }); }} />
               <input defaultValue={m.nome} onBlur={e => e.target.value.trim() && e.target.value !== m.nome && salvar(m, { nome: e.target.value.trim() })} style={{ margin: 0, flex: 1 }} />
               <button className="sec mini" onClick={() => mover(n, -1)} disabled={n === 0} aria-label="Subir">▲</button>
               <button className="sec mini" onClick={() => mover(n, 1)} disabled={n === lista.length - 1} aria-label="Descer">▼</button>

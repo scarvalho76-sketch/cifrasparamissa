@@ -71,7 +71,7 @@ function NovaMissa({ anteriores, onCriada, onCancelar }) {
   );
 }
 
-function Item({ it, n, total, musicas, porMomento, indicadas, onMudar, onMover, onTirar, onDuplicar }) {
+function Item({ it, n, total, numero, musicas, porMomento, indicadas, onMudar, onMover, onTirar, onDuplicar }) {
   const m = musicas.find(x => x.id === it.musica_id);
   const usadas = porMomento[it.momento.toLowerCase()] || {};
   // 1º as marcadas na Biblioteca para este momento; 2º as já usadas nele; depois as outras
@@ -83,7 +83,7 @@ function Item({ it, n, total, musicas, porMomento, indicadas, onMudar, onMover, 
   return (
     <div className="item">
       <div className="item-cab">
-        <span className="item-mom">{n + 1}. {it.momento}</span>
+        <span className="item-mom">{numero ? numero + '. ' : ''}{it.momento}</span>
         <span className="row" style={{ gap: 4 }}>
           <button className="sec mini" onClick={() => onMover(-1)} disabled={n === 0} aria-label="Subir">▲</button>
           <button className="sec mini" onClick={() => onMover(1)} disabled={n === total - 1} aria-label="Descer">▼</button>
@@ -184,6 +184,8 @@ function Detalhe({ id, musicos, musicas, porMomento, indicadas, momentos, onFech
   }
 
   if (!c) return <div className="card mut">Carregando…</div>;
+  // número fixo de cada momento (opcionais ficam sem número)
+  const numeroDe = Object.fromEntries(momentos.filter(m => m.numero).map(m => [m.nome.toLowerCase(), m.numero]));
   const escalados = musicos.filter(m => escala.some(e => e.musico_id === m.id));
   const semMusica = itens.filter(i => !i.musica_id).length;
   const textoZap = m => `Olá, ${m.nome.split(' ')[0]}! Missa ${dataLonga(c.data_hora)}${c.local ? ' · ' + c.local : ''}${c.titulo ? ' (' + c.titulo + ')' : ''}.\nAs músicas, letras e cifras estão no seu link:\n${linkPessoal(m.token)}`;
@@ -219,7 +221,7 @@ function Detalhe({ id, musicos, musicas, porMomento, indicadas, momentos, onFech
       {musicas.length === 0 && <p className="mut">A Biblioteca ainda está vazia: cadastre as músicas na aba Biblioteca para escolher aqui.</p>}
       <div>
         {itens.map((it, n) => (
-          <Item key={it.id} it={it} n={n} total={itens.length} musicas={musicas} porMomento={porMomento} indicadas={indicadas}
+          <Item key={it.id} it={it} n={n} total={itens.length} numero={numeroDe[it.momento.toLowerCase()]} musicas={musicas} porMomento={porMomento} indicadas={indicadas}
             onMudar={campos => mudarItem(it, campos)} onMover={d => mover(n, d)} onTirar={() => tirar(it)} onDuplicar={() => inserir(it.momento, n)} />
         ))}
       </div>

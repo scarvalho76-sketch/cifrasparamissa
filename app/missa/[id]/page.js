@@ -206,7 +206,7 @@ export default function Cerimonia() {
         return (
           <div key={i.id} ref={el => { refs.current[n] = el; }} className={'card cer-mom' + (ativo ? ' cer-ativo' : '')}>
             <button type="button" className="cer-cab" onClick={() => abrir(n)} aria-expanded={ativo}>
-              <span className="cer-num">{n + 1}</span>
+              <span className={'cer-num' + (i.numero ? '' : ' cer-sem')}>{i.numero || '✦'}</span>
               <span style={{ flex: 1, textAlign: 'left' }}>
                 <span className="cer-momento">{i.momento}</span>
                 <span className="cer-musica">{i.nome || <span className="mut">sem música escolhida</span>}{i.nome && i.artista ? <span className="mut"> · {i.artista}</span> : null}</span>
