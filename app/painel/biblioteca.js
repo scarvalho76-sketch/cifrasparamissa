@@ -281,7 +281,8 @@ export default function Biblioteca() {
             {x.tom_original ? <span className="chip" style={{ cursor: 'default' }}>Tom original: {x.tom_original}</span> : selo(false, 'Tom original')}
             {x.tom_padrao && <span className="chip on" style={{ cursor: 'default' }}>Eu canto em: {x.tom_padrao}</span>}
           </div>
-          <div className="chips" aria-label="Momentos desta música">
+          <div className="chips" aria-label="Momentos desta música" style={{ alignItems: 'center', borderTop: '1px dashed var(--line)', paddingTop: 8 }}>
+            <span className="mut" style={{ fontSize: '.85rem', marginRight: 2 }}>Momentos:</span>
             {momentos.map(m => {
               const on = liga.has(x.id + ':' + m.id);
               return <button key={m.id} className={'chip' + (on ? ' on' : '')} onClick={() => alternar(x.id, m.id)}>{on ? '✓ ' : ''}{m.nome}</button>;
