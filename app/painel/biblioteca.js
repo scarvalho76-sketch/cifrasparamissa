@@ -1,0 +1,265 @@
+'use client';
+import { useEffect, useMemo, useState } from 'react';
+import { supabase } from '@/lib/supabase';
+import { gerarGrade, lerTom, letraDaCifra } from '@/lib/musica';
+import { lerPdfDeCifra } from '@/lib/pdfCifra';
+import { chave, simples, dataCurta } from '@/lib/util';
+
+// Biblioteca de letras e cifras das missas: uma ficha por música (nome + artista).
+// Mesma lógica do Sonata Casamentos: cifra única, letra tirada da cifra, transposição pelo tom original.
+const mono = { fontFamily: 'ui-monospace, SFMono-Regular, Menlo, Consolas, monospace', fontSize: '.9rem', lineHeight: 1.45, whiteSpace: 'pre', overflowX: 'auto' };
+const vazio = { nome: '', artista: '', tom_original: '', tom_padrao: '', letra: '', cifra: '', grade: '', obs: '' };
+
+function Editor({ ficha, inicial, onSalvo, onCancelar, existentes }) {
+  const [f, setF] = useState(() => ({
+    ...vazio, ...(ficha || {}),
+    ...(inicial ? { nome: inicial.nome || '', artista: inicial.artista || '', cifra: inicial.cifra || '', tom_original: inicial.tom || '', letra: '' } : {})
+  }));
+  const [msg, setMsg] = useState(inicial && !inicial.tom ? 'Não encontrei o tom no PDF: preencha o tom original.' : '');
+  const [lendo, setLendo] = useState(false);
+  const set = k => e => setF({ ...f, [k]: e.target.value });
+  const tomInvalido = t => t.trim() && !lerTom(t);
+
+  async function importar(e) {
+    const arq = e.target.files?.[0]; e.target.value = '';
+    if (!arq) return;
+    if (f.cifra.trim() && !confirm('Substituir a cifra atual pela do PDF?')) return;
+    setMsg(''); setLendo(true);
+    try {
+      const r = await lerPdfDeCifra(arq);
+      setF({ ...f, nome: f.nome || r.nome || '', artista: f.artista || r.artista || '', cifra: r.cifra, letra: '', tom_original: r.tom || f.tom_original });
+      setMsg(r.tom ? '' : 'PDF lido. Não encontrei o tom no arquivo: preencha o tom original.');
+    } catch (err) { setMsg('Não foi possível ler o PDF: ' + err.message); }
+    setLendo(false);
+  }
+
+  async function salvar() {
+    setMsg('');
+    if (!f.nome.trim()) return setMsg('Informe o nome da música.');
+    const k = chave(f.nome, f.artista);
+    const outra = existentes?.[k];
+    if (outra && outra.id !== f.id && !confirm('Já existe uma ficha com este nome e artista. Substituir pelo que está aqui?')) return;
+    const dados = {
+      nome: f.nome.trim(), artista: f.artista.trim(), tom_original: f.tom_original.trim(), tom_padrao: f.tom_padrao.trim(),
+      letra: f.letra.replace(/\s+$/, ''), cifra: f.cifra.replace(/\s+$/, ''), grade: f.grade.replace(/\s+$/, ''), obs: f.obs.trim(),
+      atualizado_em: new Date().toISOString()
+    };
+    const alvo = f.id || outra?.id;
+    const { error } = alvo
+      ? await supabase.from('missa_musicas').update(dados).eq('id', alvo)
+      : await supabase.from('missa_musicas').insert(dados);
+    if (error) return setMsg('Não foi possível salvar: ' + error.message);
+    onSalvo();
+  }
+
+  async function excluir() {
+    if (!confirm(`Excluir "${f.nome}" da Biblioteca? Nas missas em que ela foi escolhida, o momento fica sem música.`)) return;
+    const { error } = await supabase.from('missa_musicas').delete().eq('id', f.id);
+    if (error) return setMsg('Não foi possível excluir: ' + error.message);
+    onSalvo();
+  }
+
+  return (
+    <div style={{ marginTop: 10 }}>
+      <div className="grade2">
+        <div><label>Nome da música</label><input value={f.nome} onChange={set('nome')} /></div>
+        <div><label>Cantor / autor (opcional)</label><input value={f.artista} onChange={set('artista')} /></div>
+      </div>
+      <div style={{ marginBottom: 12 }}>
+        <label style={{ display: 'inline-block', cursor: 'pointer', border: '1px solid var(--ouro)', borderRadius: 3, padding: '6px 12px', color: 'var(--ouro-escuro)', margin: 0 }}>
+          {lendo ? 'Lendo o PDF…' : '📄 Importar cifra de um PDF'}
+          <input type="file" accept="application/pdf" onChange={importar} style={{ display: 'none' }} />
+        </label>
+      </div>
+      <label>Cifra: acordes em cima da letra, como no Cifra Club</label>
+      <textarea rows={14} value={f.cifra} onChange={set('cifra')} placeholder="Cole aqui a cifra" style={mono} spellCheck={false} />
+      <div className="grade2">
+        <div>
+          <label>Tom em que a cifra foi escrita</label>
+          <input value={f.tom_original} onChange={set('tom_original')} placeholder="Ex.: G, Dm, Bb" />
+          {tomInvalido(f.tom_original) && <p className="err" style={{ marginTop: -8 }}>Não entendi este tom. Use, por exemplo: C, Am, F#, Bb, Ré, Lá menor.</p>}
+        </div>
+        <div>
+          <label>Tom em que eu canto (vale para todas as missas)</label>
+          <input value={f.tom_padrao} onChange={set('tom_padrao')} placeholder="Vazio = tom original" />
+          {tomInvalido(f.tom_padrao) && <p className="err" style={{ marginTop: -8 }}>Não entendi este tom.</p>}
+        </div>
+      </div>
+      <details style={{ margin: '0 0 12px' }} open={!!f.letra}>
+        <summary className="mut" style={{ fontSize: '.9rem' }}>Letra para quem só canta: {f.letra.trim() ? 'personalizada' : 'tirada automaticamente da cifra'}</summary>
+        <p className="mut" style={{ fontSize: '.85rem', margin: '6px 0' }}>Deixe vazio para usar a letra da própria cifra, sem os acordes.</p>
+        <textarea rows={8} value={f.letra} onChange={set('letra')} placeholder={letraDaCifra(f.cifra) || 'Cole aqui a letra'} style={{ whiteSpace: 'pre-wrap' }} />
+      </details>
+      <div className="row" style={{ marginTop: 4 }}>
+        <label style={{ margin: 0 }}>Grade harmônica: um compasso entre cada | (opcional)</label>
+        <button type="button" className="sec mini" disabled={!f.cifra.trim()}
+          onClick={() => { if (f.grade.trim() && !confirm('Substituir a grade atual pela gerada a partir da cifra?')) return; setF({ ...f, grade: gerarGrade(f.cifra) }); }}>
+          Gerar grade a partir da cifra
+        </button>
+      </div>
+      <textarea rows={6} value={f.grade} onChange={set('grade')} placeholder={'[Refrão]\n| G | D/F# | Em | C |'} style={mono} spellCheck={false} />
+      <label>Observações (ex.: “boa para Comunhão”, “refrão 2x no final”)</label>
+      <input value={f.obs} onChange={set('obs')} />
+      {msg && <p className="err">{msg}</p>}
+      <div className="row">
+        <span className="row" style={{ justifyContent: 'flex-start' }}>
+          <button onClick={salvar}>Salvar</button>
+          <button className="sec" onClick={onCancelar}>Cancelar</button>
+        </span>
+        {f.id && <button className="sec" style={{ color: 'var(--bad)', borderColor: 'var(--bad)' }} onClick={excluir}>Excluir</button>}
+      </div>
+    </div>
+  );
+}
+
+// Copia fichas da Biblioteca do Sonata Casamentos (só leitura lá; nada é alterado no Sonata)
+function DoSonata({ existentes, onFeito, onFechar }) {
+  const [lista, setLista] = useState(null);
+  const [marcadas, setMarcadas] = useState({});
+  const [busca, setBusca] = useState('');
+  const [msg, setMsg] = useState('');
+  useEffect(() => {
+    supabase.from('letras_cifras').select('nome, artista, cifra, letra, grade, tom_original').order('nome')
+      .then(({ data, error }) => { if (error) setMsg('Não foi possível ler a Biblioteca do Sonata: ' + error.message); setLista((data || []).filter(x => x.cifra)); });
+  }, []);
+  const t = simples(busca);
+  const vis = (lista || []).filter(x => !t || simples(x.nome + ' ' + x.artista).includes(t));
+  const n = Object.values(marcadas).filter(Boolean).length;
+
+  async function copiar() {
+    const linhas = (lista || []).filter(x => marcadas[chave(x.nome, x.artista)])
+      .filter(x => !existentes[chave(x.nome, x.artista)])
+      .map(x => ({ nome: x.nome.trim(), artista: (x.artista || '').trim(), cifra: x.cifra || '', letra: x.letra || '', grade: x.grade || '', tom_original: x.tom_original || '' }));
+    if (!linhas.length) return setMsg('Nenhuma música nova selecionada.');
+    const { error } = await supabase.from('missa_musicas').insert(linhas);
+    if (error) return setMsg('Não foi possível copiar: ' + error.message);
+    onFeito(linhas.length);
+  }
+
+  return (
+    <div className="card" style={{ borderLeft: '4px solid var(--ouro)' }}>
+      <div className="row"><h2 style={{ margin: 0 }}>Copiar do Sonata Casamentos</h2><button className="sec mini" onClick={onFechar}>Fechar</button></div>
+      <p className="mut">Escolha as músicas que também servem para missas. Elas são copiadas para cá; o Sonata não é alterado.</p>
+      {lista === null ? <p className="mut">Carregando…</p> : (
+        <>
+          <input placeholder="Buscar" value={busca} onChange={e => setBusca(e.target.value)} />
+          <div style={{ maxHeight: 320, overflowY: 'auto', border: '1px solid var(--line)', borderRadius: 3, padding: '4px 10px' }}>
+            {vis.map(x => {
+              const k = chave(x.nome, x.artista); const ja = !!existentes[k];
+              return (
+                <label key={k} style={{ display: 'flex', gap: 10, alignItems: 'center', padding: '6px 0', fontSize: '1rem', color: 'var(--ink)', opacity: ja ? .5 : 1 }}>
+                  <input type="checkbox" style={{ width: 'auto', margin: 0 }} disabled={ja} checked={ja || !!marcadas[k]} onChange={e => setMarcadas({ ...marcadas, [k]: e.target.checked })} />
+                  <span>{x.nome}{x.artista ? <span className="mut"> · {x.artista}</span> : null}{ja ? <span className="mut"> (já está aqui)</span> : null}</span>
+                </label>
+              );
+            })}
+            {vis.length === 0 && <p className="mut">Nenhuma música com cifra encontrada.</p>}
+          </div>
+          {msg && <p className="err">{msg}</p>}
+          <button style={{ marginTop: 12 }} onClick={copiar} disabled={!n}>Copiar {n || ''} {n === 1 ? 'música' : 'músicas'}</button>
+        </>
+      )}
+    </div>
+  );
+}
+
+export default function Biblioteca() {
+  const [fichas, setFichas] = useState([]);
+  const [usos, setUsos] = useState({});      // musica_id -> próximas missas
+  const [busca, setBusca] = useState('');
+  const [aberto, setAberto] = useState(null);
+  const [filtro, setFiltro] = useState('todas');
+  const [importados, setImportados] = useState([]);
+  const [lendo, setLendo] = useState(false);
+  const [sonata, setSonata] = useState(false);
+  const [aviso, setAviso] = useState('');
+
+  const carregar = async () => {
+    const agora = new Date(Date.now() - 12 * 3600e3).toISOString();
+    const [a, b] = await Promise.all([
+      supabase.from('missa_musicas').select('*').order('nome'),
+      supabase.from('missa_itens').select('musica_id, momento, missa_celebracoes!inner(id, data_hora, titulo)').not('musica_id', 'is', null).gte('missa_celebracoes.data_hora', agora)
+    ]);
+    setFichas(a.data || []);
+    const u = {};
+    (b.data || []).forEach(x => { (u[x.musica_id] ||= []).push({ momento: x.momento, ...x.missa_celebracoes }); });
+    setUsos(u);
+  };
+  useEffect(() => { carregar(); }, []);
+
+  const existentes = useMemo(() => Object.fromEntries(fichas.map(x => [chave(x.nome, x.artista), x])), [fichas]);
+
+  async function importarVarios(e) {
+    const arqs = [...(e.target.files || [])]; e.target.value = '';
+    if (!arqs.length) return;
+    setLendo(true);
+    const novos = [];
+    for (const arq of arqs) {
+      const id = arq.name + Date.now() + Math.random();
+      try { novos.push({ id, arquivo: arq.name, dados: await lerPdfDeCifra(arq) }); }
+      catch (err) { novos.push({ id, arquivo: arq.name, erro: err.message }); }
+    }
+    setImportados(x => [...x, ...novos]); setLendo(false);
+  }
+  const tirar = id => setImportados(x => x.filter(i => i.id !== id));
+
+  const t = simples(busca);
+  const faltam = fichas.filter(x => usos[x.id] && !x.cifra.trim());
+  const vis = fichas.filter(x => {
+    if (t && !simples(x.nome + ' ' + x.artista).includes(t)) return false;
+    if (filtro === 'faltando') return !x.cifra.trim() || !x.tom_original.trim();
+    if (filtro === 'proximas') return !!usos[x.id];
+    return true;
+  });
+  const selo = (ok, txt) => <span className={'chip' + (ok ? ' on' : '')} style={{ cursor: 'default' }}>{ok ? '✓' : '✗'} {txt}</span>;
+
+  return (
+    <>
+      <div className="row" style={{ marginBottom: 12 }}>
+        <h2 style={{ margin: 0 }}>Biblioteca <span className="mut" style={{ fontWeight: 400 }}>· {fichas.length} {fichas.length === 1 ? 'música' : 'músicas'}</span></h2>
+        <span className="row" style={{ gap: 6 }}>
+          <label style={{ display: 'inline-block', cursor: 'pointer', border: '1px solid var(--ouro)', borderRadius: 3, padding: '8px 14px', color: 'var(--ouro-escuro)', margin: 0, fontSize: '1rem' }}>
+            {lendo ? 'Lendo…' : '📄 Importar PDFs'}
+            <input type="file" accept="application/pdf" multiple onChange={importarVarios} style={{ display: 'none' }} />
+          </label>
+          <button className="sec" onClick={() => setSonata(!sonata)}>Copiar do Sonata</button>
+          <button className="sec" onClick={() => setAberto(aberto === 'novo' ? null : 'novo')}>{aberto === 'novo' ? 'Fechar' : '+ Música'}</button>
+        </span>
+      </div>
+      {aviso && <p className="okmsg">{aviso}</p>}
+      {faltam.length > 0 && <div className="card late"><strong>Faltando cifra em músicas das próximas missas:</strong> {faltam.map(x => x.nome).join(', ')}</div>}
+      {sonata && <DoSonata existentes={existentes} onFechar={() => setSonata(false)} onFeito={n => { setSonata(false); setAviso(`${n} ${n === 1 ? 'música copiada' : 'músicas copiadas'} do Sonata.`); carregar(); }} />}
+      {importados.length > 0 && <p className="mut">Revise cada música importada e toque em Salvar.</p>}
+      {importados.map(i => (
+        <div key={i.id} className="card" style={{ borderLeft: '4px solid var(--ouro)' }}>
+          <div className="row"><strong>📄 {i.arquivo}</strong><button className="sec mini" onClick={() => tirar(i.id)}>Descartar</button></div>
+          {i.erro ? <p className="err">{i.erro}</p> : <Editor inicial={i.dados} existentes={existentes} onSalvo={() => { tirar(i.id); carregar(); }} onCancelar={() => tirar(i.id)} />}
+        </div>
+      ))}
+      {aberto === 'novo' && <div className="card"><Editor existentes={existentes} onSalvo={() => { setAberto(null); carregar(); }} onCancelar={() => setAberto(null)} /></div>}
+      <div className="tabs" style={{ marginTop: 0 }}>
+        <button className={filtro === 'todas' ? 'on' : ''} onClick={() => setFiltro('todas')}>Todas</button>
+        <button className={filtro === 'proximas' ? 'on' : ''} onClick={() => setFiltro('proximas')}>Nas próximas missas</button>
+        <button className={filtro === 'faltando' ? 'on' : ''} onClick={() => setFiltro('faltando')}>Sem cifra ou sem tom</button>
+      </div>
+      <input placeholder="Buscar por música ou autor" value={busca} onChange={e => setBusca(e.target.value)} />
+      {vis.length === 0 && <div className="card mut">{fichas.length ? 'Nenhuma música encontrada.' : 'A Biblioteca está vazia. Importe PDFs do Cifra Club, copie do Sonata ou cadastre uma música.'}</div>}
+      {vis.map(x => (
+        <div key={x.id} className="card">
+          <div className="row">
+            <span><strong>{x.nome}</strong>{x.artista ? <span className="mut"> · {x.artista}</span> : null}</span>
+            <button className="sec mini" onClick={() => setAberto(aberto === x.id ? null : x.id)}>{aberto === x.id ? 'Fechar' : 'Editar'}</button>
+          </div>
+          <div className="chips">
+            {selo(!!x.cifra.trim(), 'Cifra')}{x.grade && selo(true, 'Grade')}
+            {x.tom_original ? <span className="chip" style={{ cursor: 'default' }}>Tom original: {x.tom_original}</span> : selo(false, 'Tom original')}
+            {x.tom_padrao && <span className="chip on" style={{ cursor: 'default' }}>Eu canto em: {x.tom_padrao}</span>}
+          </div>
+          {x.obs && <div className="mut" style={{ fontSize: '.85rem', marginTop: 6 }}>{x.obs}</div>}
+          {usos[x.id] && <div className="mut" style={{ fontSize: '.85rem', marginTop: 6 }}>Em: {usos[x.id].map(u => `${u.momento} (${dataCurta(u.data_hora)})`).join(', ')}</div>}
+          {aberto === x.id && <Editor ficha={x} existentes={existentes} onSalvo={() => { setAberto(null); carregar(); }} onCancelar={() => setAberto(null)} />}
+        </div>
+      ))}
+    </>
+  );
+}

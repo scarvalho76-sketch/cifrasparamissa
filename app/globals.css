@@ -1,0 +1,92 @@
+@import url('https://fonts.googleapis.com/css2?family=Cormorant+Garamond:wght@500;600;700&family=Jost:wght@400;500;600&display=swap');
+
+:root{
+  --preto:#4a1520; --carvao:#2a1a1c;
+  --ouro:#b8934a; --ouro-claro:#e0c58c; --ouro-escuro:#8a6a2b;
+  --fundo:#f4f2ee; --card:#fffdfa; --ink:#1d1a17; --mut:#6b645b; --line:#e0d9cb;
+  --bad:#a33a2e; --ok:#2e6b4a;
+}
+
+/* Modo escuro: segue a preferência do sistema/dispositivo automaticamente */
+@media (prefers-color-scheme: dark){
+  :root{
+    --preto:#2b0c12; --carvao:#171310;
+    --ouro:#c9a05a; --ouro-claro:#e8cf9a; --ouro-escuro:#a9823c;
+    --fundo:#0e0c0a; --card:#1a1613; --ink:#efe9df; --mut:#a79e8e; --line:#332c24;
+    --bad:#e2685a; --ok:#4fae7b;
+  }
+}
+
+*{box-sizing:border-box}
+body{margin:0;background:var(--fundo);color:var(--ink);font:16px/1.55 "Jost","Segoe UI",system-ui,sans-serif}
+::selection{background:var(--ouro-claro)}
+
+.topo{background:var(--preto);border-bottom:2px solid var(--ouro);text-align:center;padding:10px 0}
+.topo a{color:var(--ouro-claro);text-decoration:none;font:600 1.6rem/1.2 "Cormorant Garamond",Georgia,serif;letter-spacing:.04em}
+.topo small{display:block;font:400 .75rem "Jost",sans-serif;letter-spacing:.2em;text-transform:uppercase;color:var(--ouro)}
+
+h1,h2{font-family:"Cormorant Garamond",Georgia,serif;font-weight:600;color:var(--carvao);letter-spacing:.01em}
+@media (prefers-color-scheme: dark){ h1,h2{ color:var(--ink); } }
+h1{font-size:2rem;line-height:1.15;margin:0}
+h2{font-size:1.35rem;line-height:1.2;margin:0 0 .6rem}
+
+.wrap{max-width:720px;margin:0 auto;padding:22px 16px 56px}
+.card{background:var(--card);border:1px solid var(--line);border-top:2px solid var(--ouro);border-radius:3px;padding:16px;margin-bottom:14px;box-shadow:0 1px 2px rgba(29,26,23,.05)}
+.card.late{border-left:4px solid var(--bad)}
+.off{opacity:.55}
+
+input,textarea,select{font:inherit;color:var(--ink)}
+input,textarea{width:100%;padding:10px 12px;border:1px solid var(--line);border-radius:3px;margin:4px 0 12px;background:var(--card)}
+input:focus,textarea:focus,select:focus,button:focus-visible{outline:2px solid var(--ouro);outline-offset:1px}
+label{font-size:.85rem;color:var(--mut)}
+
+button{font:inherit;font-weight:500;letter-spacing:.03em;min-height:40px;background:var(--preto);color:var(--ouro-claro);border:1px solid var(--ouro);border-radius:3px;padding:8px 16px;cursor:pointer;transition:background .15s}
+button:hover{background:var(--carvao)}
+button.sec{background:transparent;color:var(--ouro-escuro);border-color:var(--ouro)}
+button.sec:hover{background:rgba(184,147,74,.1)}
+button.wa{background:var(--ok);border-color:var(--ok);color:#fff}
+button:disabled{cursor:not-allowed}
+
+.tabs{display:flex;gap:6px;margin:16px 0;overflow-x:auto;border-bottom:1px solid var(--line);padding-bottom:12px}
+.tabs button{background:transparent;color:var(--ink);border-color:var(--line);white-space:nowrap}
+.tabs button.on{background:var(--preto);color:var(--ouro-claro);border-color:var(--ouro)}
+
+.row{display:flex;gap:8px;flex-wrap:wrap;align-items:center;justify-content:space-between}
+.chips{display:flex;flex-wrap:wrap;gap:6px;margin-top:8px}
+.chip{min-height:0;padding:3px 11px;border-radius:99px;border:1px solid var(--line);background:var(--card);color:var(--mut);font-size:.8rem;letter-spacing:0}
+.chip:hover{background:var(--card)}
+.chip.on{background:var(--ouro);color:var(--preto);border-color:var(--ouro)}
+
+.mut{color:var(--mut);font-size:.92rem}
+.err{color:var(--bad)}
+.okmsg{color:var(--ok)}
+details.card summary{cursor:pointer}
+
+/* Modo cerimônia */
+.cer .cer-mom{padding:12px 14px}
+.cer .cer-ativo{border-left:4px solid var(--ouro)}
+.cer .cer-cab{display:flex;align-items:center;gap:12px;width:100%;background:transparent;color:var(--ink);border:0;padding:4px 0;min-height:48px;text-align:left;letter-spacing:0}
+.cer .cer-cab:hover{background:transparent}
+.cer .cer-num{flex:none;width:30px;height:30px;border-radius:50%;border:1px solid var(--ouro);display:flex;align-items:center;justify-content:center;font-size:.85rem;color:var(--ouro-escuro)}
+.cer .cer-momento{display:block;font-size:.8rem;text-transform:uppercase;letter-spacing:.06em;color:var(--mut)}
+.cer .cer-musica{display:block;font-weight:600;font-size:1.05rem}
+.cer pre{margin:0;padding:12px;border:1px solid var(--line);border-radius:3px;background:var(--fundo);color:var(--ink)}
+.cer .cer-letra{white-space:pre-wrap;font:1.15rem/1.6 "Jost","Segoe UI",system-ui,sans-serif}
+.cer .cer-cifra{white-space:pre;overflow-x:auto;font:1rem/1.5 ui-monospace,SFMono-Regular,Menlo,Consolas,monospace}
+.cer .cer-prox{width:100%;margin-top:14px;min-height:52px;font-size:1rem}
+.cer .cer-mini{min-height:36px;padding:4px 12px;font-size:.9rem}
+
+/* Painel */
+select{padding:9px 10px;border:1px solid var(--line);border-radius:3px;background:var(--card);margin:4px 0 12px;max-width:100%}
+.grade2{display:grid;grid-template-columns:1fr 1fr;gap:0 12px}
+@media (max-width:560px){.grade2{grid-template-columns:1fr}}
+.item{border-top:1px solid var(--line);padding:10px 0}
+.item:first-child{border-top:0}
+.item-cab{display:flex;gap:8px;align-items:center;justify-content:space-between}
+.item-mom{font-size:.8rem;text-transform:uppercase;letter-spacing:.06em;color:var(--mut)}
+.item-campos{display:grid;grid-template-columns:1fr 90px;gap:0 8px}
+.item-campos select,.item-campos input{margin-bottom:4px}
+.mini{min-height:32px;padding:2px 10px;font-size:.85rem}
+.falta{color:var(--bad);font-size:.8rem}
+a.botao{display:inline-block;text-decoration:none;font-weight:500;letter-spacing:.03em;background:var(--preto);color:var(--ouro-claro);border:1px solid var(--ouro);border-radius:3px;padding:8px 16px}
+a.botao.sec{background:transparent;color:var(--ouro-escuro)}
