@@ -148,7 +148,9 @@ function BuscaAvulsa({ biblioteca, escolhida, onEscolher }) {
   );
   if (!biblioteca) return <p className="mut">Abra esta missa com internet uma vez para poder buscar músicas.</p>;
   const t = simples(busca);
-  const achadas = t ? biblioteca.filter(m => simples(m.nome + ' ' + m.artista).includes(t)).slice(0, 12) : [];
+  // fora da lista: músicas do Ato penitencial, Glória, Santo e Cordeiro (partes fixas da missa)
+  const fixa = m => (m.momentos || []).some(n => /^(ato penitencial|gl[oó]ria|santo|cordeiro)$/i.test(String(n).trim()));
+  const achadas = t ? biblioteca.filter(m => !fixa(m) && simples(m.nome + ' ' + m.artista).includes(t)).slice(0, 12) : [];
   return (
     <div style={{ marginBottom: 8 }}>
       <input type="search" value={busca} onChange={e => setBusca(e.target.value)} placeholder="Digite o nome da música" autoComplete="off" style={{ marginBottom: 6 }} />
