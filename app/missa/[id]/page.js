@@ -83,6 +83,7 @@ export default function Cerimonia() {
   const [formato, setFormato] = useState(null);
   const [usaCapo, setUsaCapo] = useState(null);
   const [leituras, setLeituras] = useState(null); // da Liturgia Diária (CNBB), guardadas só no aparelho
+  const [salmo, setSalmo] = useState(null);
   useTelaAcesa();
   useEffect(() => {
     setAjustes(lerPref(chaveLocal(escala) + ':ajustes', {}));
@@ -104,16 +105,16 @@ export default function Cerimonia() {
       const r = await fetch(`/api/liturgia?data=${dataIso(dataHora)}&completo=1`);
       if (!r.ok) return;
       const l = await r.json();
-      if (!l?.leituras?.length) return;
-      setLeituras(l.leituras);
-      try { localStorage.setItem(chaveLocal(escala) + ':leituras', JSON.stringify({ data: dataIso(dataHora), leituras: l.leituras })); } catch {}
+      if (!l?.leituras?.length && !l?.salmo) return;
+      setLeituras(l.leituras || []); setSalmo(l.salmo || null);
+      try { localStorage.setItem(chaveLocal(escala) + ':leituras', JSON.stringify({ data: dataIso(dataHora), leituras: l.leituras, salmo: l.salmo })); } catch {}
     } catch {}
   }
 
   useEffect(() => {
     const local = lerLocal(escala);
     if (local) setD(local);
-    try { const g = JSON.parse(localStorage.getItem(chaveLocal(escala) + ':leituras') || 'null'); if (g && local && g.data === dataIso(local.data_hora)) setLeituras(g.leituras); } catch {}
+    try { const g = JSON.parse(localStorage.getItem(chaveLocal(escala) + ':leituras') || 'null'); if (g && local && g.data === dataIso(local.data_hora)) { setLeituras(g.leituras); setSalmo(g.salmo || null); } } catch {}
     try { setBaixado(localStorage.getItem(chaveLocal(escala) + ':pagina') === '1'); } catch {}
     setOnline(navigator.onLine);
     const on = () => setOnline(true), off = () => setOnline(false);
@@ -175,7 +176,14 @@ export default function Cerimonia() {
   const padrao = !instr ? 'cifra' : (tocaAlgo(instr) ? 'cifra' : 'letra');
   const visao = formato || padrao;
   const mostraCifra = visao !== 'letra';
-  const itens = d.itens || [];
+  let itens = d.itens || [];
+  // Salmo do dia (CNBB): se a missa não tem o momento Salmo, ele entra na posição 4
+  const ehSalmo = i => /^salmo/i.test(i.momento || '');
+  if (salmo && !itens.some(ehSalmo)) {
+    const v = { id: 'salmo-cnbb', momento: 'Salmo', numero: 4, obs: '' };
+    const k = itens.findIndex(i => i.numero && i.numero > 4);
+    itens = k >= 0 ? [...itens.slice(0, k), v, ...itens.slice(k)] : [...itens, v];
+  }
   // Capotraste: quem toca violão vê as formas dos acordes com o capo; tecladista vê a cifra no tom real
   const soTeclado = /teclado|piano|órg[aã]o|orgao/i.test(instr || '') && !/viol/i.test(instr || '');
   const comCapo = usaCapo ?? !soTeclado;
@@ -271,7 +279,7 @@ export default function Cerimonia() {
               <span className={'cer-num' + (i.numero ? '' : ' cer-sem')}>{i.numero || '✦'}</span>
               <span style={{ flex: 1, textAlign: 'left' }}>
                 <span className="cer-momento">{i.momento}</span>
-                <span className="cer-musica">{i.nome || <span className="mut">sem música escolhida</span>}{i.nome && i.artista ? <span className="mut"> · {i.artista}</span> : null}</span>
+                <span className="cer-musica">{i.nome || (salmo && ehSalmo(i) ? salmo.referencia || 'Salmo do dia' : <span className="mut">sem música escolhida</span>)}{i.nome && i.artista ? <span className="mut"> · {i.artista}</span> : null}</span>
               </span>
               <span aria-hidden="true">{ativo ? '▾' : '▸'}</span>
             </button>
@@ -280,6 +288,7 @@ export default function Cerimonia() {
               {mostraCifra && i.capo > 0 && <Selo forte>Capotraste na {i.capo}ª casa</Selo>}
               {i.obs && i.obs.length <= 40 && <Selo forte>{i.obs}</Selo>}
             </div>
+            {salmo && ehSalmo(i) && salmo.refrao && <p className="cer-obs"><strong>R.</strong> {salmo.refrao}</p>}
             {i.obs && i.obs.length > 40 && <p className="cer-obs">{/^aclama/i.test(i.momento) ? <><strong>V.</strong> </> : null}{i.obs}</p>}
             {ativo && (
               <div style={{ marginTop: 12 }}>
@@ -301,7 +310,14 @@ export default function Cerimonia() {
                 {aviso && <p className="err" style={{ fontSize: '.9rem' }}>{aviso}</p>}
                 {gradeAuto && <p className="mut" style={{ fontSize: '.9rem' }}>Grade montada automaticamente a partir da cifra, com um acorde por compasso: pode não corresponder aos compassos reais.</p>}
                 {querGrade && !i.grade && !gradeAuto && i.cifra && <p className="mut" style={{ fontSize: '.9rem' }}>Não foi possível montar a grade desta cifra; mostrando a cifra.</p>}
-                {texto ? <pre className={mostraCifra ? 'cer-cifra' : 'cer-letra'} style={{ fontSize: `${(mostraCifra ? 1 : 1.15) * fonte}rem` }}>{texto}</pre> : <p className="mut">{falta}</p>}
+                {texto ? <pre className={mostraCifra ? 'cer-cifra' : 'cer-letra'} style={{ fontSize: `${(mostraCifra ? 1 : 1.15) * fonte}rem` }}>{texto}</pre> : !(salmo && ehSalmo(i)) && <p className="mut">{falta}</p>}
+                {salmo && ehSalmo(i) && (
+                  <div style={{ marginTop: texto ? 14 : 0 }}>
+                    <p style={{ margin: '0 0 8px', fontWeight: 600 }}>Salmo do dia <span className="mut">{salmo.referencia}</span></p>
+                    <pre className="cer-letra" style={{ fontSize: `${1.05 * fonte}rem` }}>{'R. ' + salmo.refrao + '\n\n' + salmo.texto}</pre>
+                    <p className="mut" style={{ fontSize: '.8rem', margin: '6px 0 0' }}>Fonte: <a href="https://liturgiadiaria.edicoescnbb.com.br/" target="_blank" rel="noreferrer">Liturgia Diária · Edições CNBB</a></p>
+                  </div>
+                )}
                 {n < itens.length - 1
                   ? <button className="cer-prox" onClick={() => abrir(n + 1)}>Próximo momento ▸ {itens[n + 1].momento}</button>
                   : <p className="mut" style={{ textAlign: 'center', marginTop: 16 }}>Fim do roteiro 🎶</p>}
