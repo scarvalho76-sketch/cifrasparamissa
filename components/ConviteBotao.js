@@ -4,7 +4,7 @@ import { supabase } from '@/lib/supabase';
 import { dataLonga, fmtData, dataIso } from '@/lib/util';
 
 // Link para convidados (instrumentistas ou cantores presentes): abre o Modo celebração desta missa,
-// só para ver, e vale apenas no dia da celebração.
+// só para ver; já pode ser usado e vale até o dia da celebração.
 export default function ConviteBotao({ missaId, dataHora, titulo }) {
   const [link, setLink] = useState('');
   const [msg, setMsg] = useState('');
@@ -18,7 +18,7 @@ export default function ConviteBotao({ missaId, dataHora, titulo }) {
     setLink(`${location.origin}/missa/${missaId}?c=${data.convite}`); setAberto(true);
     if (novo) setMsg('Novo link gerado. O anterior não funciona mais.');
   }
-  const texto = () => `Músicas da missa${titulo ? ' (' + titulo + ')' : ''} de ${dataLonga(dataHora)}.\nAcompanhe letras e cifras por este link (vale só no dia da celebração):\n${link}`;
+  const texto = () => `Músicas da missa${titulo ? ' (' + titulo + ')' : ''} de ${dataLonga(dataHora)}.\nAcompanhe letras e cifras por este link (vale até o dia da celebração):\n${link}`;
   async function copiar() {
     try { await navigator.clipboard.writeText(link); setMsg('✓ Link copiado'); } catch { prompt('Copie o link:', link); }
   }
@@ -34,7 +34,7 @@ export default function ConviteBotao({ missaId, dataHora, titulo }) {
       <strong>Link para convidados</strong>
       <p className="mut" style={{ margin: '4px 0 8px', fontSize: '.9rem' }}>
         Quem abrir vê esta missa no Modo celebração (letra ou cifra), sem cadastro e sem poder alterar nada.
-        {' '}Vale só no dia <strong>{fmtData(dataHora)}</strong>{ehHoje ? ' (hoje)' : ''}.
+        {' '}Já pode ser usado e vale até o dia <strong>{fmtData(dataHora)}</strong>{ehHoje ? ' (hoje)' : ''}.
       </p>
       <input readOnly value={link} onFocus={e => e.target.select()} style={{ fontSize: '.85rem', marginBottom: 8 }} />
       <div className="row" style={{ justifyContent: 'flex-start', gap: 6 }}>

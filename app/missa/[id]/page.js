@@ -2,7 +2,7 @@
 import { useEffect, useRef, useState } from 'react';
 import { useParams } from 'next/navigation';
 import { supabase } from '@/lib/supabase';
-import { dataLonga, dataHoraCurta, dataIso, simples } from '@/lib/util';
+import { dataLonga, dataHoraCurta, dataIso, simples, fmtData } from '@/lib/util';
 import ConviteBotao from '@/components/ConviteBotao';
 import { transporCifra, distancia, nomeDoTom, lerTom, gerarGrade, letraDaCifra } from '@/lib/musica';
 
@@ -20,7 +20,7 @@ const tocaAlgo = i => partes(i).some(p => !/voz/i.test(p));
 // Data (aaaa-mm-dd) no horário de Brasília, para conferir o "dia da celebração"
 const diaBrasilia = s => new Intl.DateTimeFormat('en-CA', { timeZone: 'America/Sao_Paulo', year: 'numeric', month: '2-digit', day: '2-digit' }).format(new Date(s));
 
-// Convidado: depois do dia da celebração, apaga deste aparelho tudo o que foi guardado desta missa
+// Convidado: depois do dia da celebração (o link vale até esse dia), apaga deste aparelho tudo o que foi guardado desta missa
 async function apagarCopiaDoConvidado(id) {
   try {
     [chaveLocal(id), chaveLocal(id) + ':leituras', chaveLocal(id) + ':pagina', chaveLocal(id) + ':ajustes', 'missa:convite:' + id]
@@ -169,7 +169,7 @@ function Selo({ children, forte }) {
 export default function Cerimonia() {
   const { id: escala } = useParams();
   const [token, setToken] = useState(null);
-  const [convite, setConvite] = useState(null); // link de convidado (vale só no dia)
+  const [convite, setConvite] = useState(null); // link de convidado (vale até o dia da celebração)
   const [d, setD] = useState(undefined);
   const [erro, setErro] = useState('');
   const [online, setOnline] = useState(true);
@@ -229,10 +229,10 @@ export default function Cerimonia() {
     const copia = lerLocal(escala);
     let tkMusico = null; try { tkMusico = localStorage.getItem('missa:token'); } catch {}
     const ehDono = copia && (copia.pode_convidar || (!copia.convidado && tkMusico));
-    if (cvGuardado && copia && !ehDono && diaBrasilia(copia.data_hora) !== diaBrasilia(Date.now())) {
+    if (cvGuardado && copia && !ehDono && diaBrasilia(Date.now()) > diaBrasilia(copia.data_hora)) {
       apagarCopiaDoConvidado(escala);
       setConvite(cvGuardado);
-      setErro('Este link de convidado só vale no dia da celebração. A cópia guardada neste aparelho foi apagada.');
+      setErro('Este link de convidado venceu: ele valia até o dia da celebração. A cópia guardada neste aparelho foi apagada.');
       setD(null);
       return;
     }
@@ -334,7 +334,7 @@ export default function Cerimonia() {
       <div className="card">
         <div className="mut">{dt(d.data_hora)}</div>
         <h1 style={{ marginTop: 4 }}>{d.titulo || 'Missa'}</h1>
-        <div className="mut">{[d.local, d.tempo].filter(Boolean).join(' · ')}{instr ? ` · ${d.musico} (${instr})` : ''}{d.convidado ? ' · acesso de convidado (só hoje)' : ''}</div>
+        <div className="mut">{[d.local, d.tempo].filter(Boolean).join(' · ')}{instr ? ` · ${d.musico} (${instr})` : ''}{d.convidado ? ` · acesso de convidado (até ${fmtData(d.data_hora)})` : ''}</div>
         {d.pode_convidar && <div style={{ marginTop: 8 }}><ConviteBotao missaId={d.id} dataHora={d.data_hora} titulo={d.titulo} /></div>}
         <div className="row" style={{ marginTop: 10 }}>
           <span className={baixado ? 'okmsg' : 'mut'} style={{ fontSize: '.9rem' }}>
