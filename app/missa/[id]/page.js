@@ -121,7 +121,7 @@ function Rolagem({ alvoId }) {
   );
 }
 
-// Música avulsa (ex.: cantada durante a homilia): busca na Biblioteca, sem registrar na missa
+// Música durante a homilia: busca na Biblioteca, sem registrar na missa
 function BuscaAvulsa({ biblioteca, escolhida, onEscolher }) {
   const [busca, setBusca] = useState('');
   if (escolhida) return (
@@ -282,10 +282,10 @@ export default function Cerimonia() {
     const k = itens.findIndex(i => i.numero && i.numero > 4);
     itens = k >= 0 ? [...itens.slice(0, k), v, ...itens.slice(k)] : [...itens, v];
   }
-  // Música avulsa: seção sem número entre a Aclamação (5) e o Ofertório (6)
+  // Música durante a homilia: seção sem número entre a Aclamação (5) e o Ofertório (6)
   const escolhida = avulsa && biblioteca ? biblioteca.find(m => m.id === avulsa) : null;
   {
-    const v = { id: escolhida ? 'avulsa-' + escolhida.id : 'avulsa', momento: 'Música avulsa', numero: null, obs: '', avulsa: true,
+    const v = { id: escolhida ? 'avulsa-' + escolhida.id : 'avulsa', momento: 'Música durante a homilia', numero: null, obs: '', avulsa: true,
       ...(escolhida ? { nome: escolhida.nome, artista: escolhida.artista, cifra: escolhida.cifra, letra: escolhida.letra, grade: escolhida.grade,
         tom_original: escolhida.tom_original, tom: escolhida.tom_padrao || escolhida.tom_original, capo: escolhida.capo || 0 } : {}) };
     const k = itens.findIndex(i => i.numero && i.numero > 5);
