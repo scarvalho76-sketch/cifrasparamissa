@@ -105,3 +105,12 @@ select{padding:9px 10px;border:1px solid var(--line);border-radius:3px;backgroun
 .falta{color:var(--bad);font-size:.8rem}
 a.botao{display:inline-block;text-decoration:none;font-weight:500;letter-spacing:.03em;background:var(--preto);color:var(--ouro-claro);border:1px solid var(--ouro);border-radius:3px;padding:8px 16px}
 a.botao.sec{background:transparent;color:var(--ouro-escuro)}
+
+/* Leituras do dia no painel */
+.leituras{display:flex;flex-direction:column;gap:6px}
+.leitura{border:1px solid var(--line);border-left:3px solid var(--ouro);border-radius:3px;background:var(--fundo);padding:8px 12px}
+.leitura summary{cursor:pointer;list-style-position:inside}
+.leitura summary::marker{color:var(--ouro)}
+.leitura-tit{font-size:.8rem;text-transform:uppercase;letter-spacing:.06em;color:var(--ouro-escuro);font-weight:600}
+.leitura-res{display:block;font-style:italic;color:var(--ink);margin-top:2px}
+.leitura[open]{background:var(--card)}

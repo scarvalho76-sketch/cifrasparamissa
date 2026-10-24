@@ -5,6 +5,7 @@ import { linkWhatsApp } from '@/lib/whatsapp';
 import { lerTom } from '@/lib/musica';
 import { dataLonga, dataCurta, fmtData, fmtHora, juntarDataHora, TEMPOS, buscarLiturgia, ehAclamacao, tempoDaLiturgia } from '@/lib/util';
 import CampoDataHora from './campoData';
+import LeiturasDoDia from './leituras';
 import { linkPessoal } from './musicos';
 
 const SEM_GLORIA = ['Advento', 'Quaresma'];
@@ -28,7 +29,7 @@ function NovaMissa({ anteriores, onCriada, onCancelar }) {
     setLit(null);
     if (!dia) return;
     let vivo = true; setBuscando(true);
-    buscarLiturgia(dia).then(l => {
+    buscarLiturgia(dia, true).then(l => {
       if (!vivo) return; setBuscando(false); setLit(l || false);
       if (l) setF(x => ({ ...x, titulo: x.titulo || l.celebracao, tempo: tempoDaLiturgia(l) || x.tempo }));
     });
@@ -77,6 +78,7 @@ function NovaMissa({ anteriores, onCriada, onCancelar }) {
       {buscando && <p className="mut" style={{ marginTop: -6 }}>Consultando a Liturgia Diária…</p>}
       {lit && <p className="okmsg" style={{ marginTop: -6 }}>Liturgia Diária: {lit.celebracao}{lit.cor ? ` · cor ${lit.cor}` : ''}{lit.aclamacao?.verso ? ' · antífona da Aclamação encontrada' : ''}</p>}
       {lit === false && <p className="mut" style={{ marginTop: -6 }}>Não foi possível consultar a Liturgia Diária deste dia; preencha à mão.</p>}
+      {lit?.leituras?.length > 0 && <div style={{ margin: '0 0 12px' }}><LeiturasDoDia leituras={lit.leituras} /></div>}
       <label>Começar com</label>
       <select value={f.base} onChange={set('base')} style={{ width: '100%' }}>
         <option value="">Os momentos automáticos (aba Momentos)</option>
@@ -263,6 +265,9 @@ function Detalhe({ id, musicos, musicas, porMomento, indicadas, momentos, onFech
           <div className="row" style={{ justifyContent: 'flex-start' }}><button onClick={salvarDados}>Salvar</button><button className="sec" onClick={() => setEditando(false)}>Cancelar</button></div>
         </div>
       )}
+
+      <h2 style={{ marginTop: 20 }}>Leituras do dia</h2>
+      <LeiturasDoDia data={c.data_hora} />
 
       <h2 style={{ marginTop: 20 }}>Músicas {semMusica > 0 && <span className="falta" style={{ fontFamily: 'inherit', fontSize: '.85rem' }}>· {semMusica} sem música</span>}</h2>
       {musicas.length === 0 && <p className="mut">A Biblioteca ainda está vazia: cadastre as músicas na aba Biblioteca para escolher aqui.</p>}
