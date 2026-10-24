@@ -6,6 +6,7 @@ import { lerTom } from '@/lib/musica';
 import { dataLonga, dataCurta, fmtData, fmtHora, juntarDataHora, TEMPOS, buscarLiturgia, ehAclamacao, tempoDaLiturgia } from '@/lib/util';
 import CampoDataHora from './campoData';
 import LeiturasDoDia from './leituras';
+import { ehConta } from '@/lib/conta';
 import { linkPessoal } from './musicos';
 
 const SEM_GLORIA = ['Advento', 'Quaresma'];
@@ -286,6 +287,7 @@ function Detalhe({ id, musicos, musicas, porMomento, indicadas, momentos, onFech
         <button className="sec" onClick={acrescentar} disabled={!novoMom}>Acrescentar</button>
       </div>
 
+      {!ehConta() && <>
       <h2 style={{ marginTop: 20 }}>Músicos</h2>
       {musicos.filter(m => m.ativo).length === 0 ? <p className="mut">Só você. Para tocar com outros músicos, cadastre-os na aba Músicos.</p> : (
         <div className="chips">
@@ -302,6 +304,7 @@ function Detalhe({ id, musicos, musicas, porMomento, indicadas, momentos, onFech
             : <span key={m.id} className="chip mut">{m.nome}: sem WhatsApp cadastrado</span>)}
         </div>
       )}
+      </>}
       {msg && <p className="err">{msg}</p>}
       <div className="row" style={{ marginTop: 20, justifyContent: 'flex-end' }}>
         <button className="sec" style={{ color: 'var(--bad)', borderColor: 'var(--bad)' }} onClick={excluir}>Excluir missa</button>
