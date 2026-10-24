@@ -41,7 +41,7 @@ async function guardarPagina() {
       extras.push(...(html.match(/\/_next\/static\/[\w\-.\/~%]+\.(?:js|css)/g) || []));
     } catch {}
   }
-  await cache.addAll([...new Set([location.pathname, ...arquivos])]);
+  await cache.addAll([...new Set([location.pathname, '/emblema.webp', ...arquivos])]);
   // a tela do músico é um extra: se algum arquivo falhar, a missa continua guardada
   await Promise.all([...new Set(extras)].map(u => cache.add(u).catch(() => {})));
 }

@@ -1,37 +1,46 @@
 @import url('https://fonts.googleapis.com/css2?family=Cormorant+Garamond:wght@500;600;700&family=Jost:wght@400;500;600&display=swap');
 
 :root{
-  --preto:#4a1520; --carvao:#2a1a1c;
-  --ouro:#b8934a; --ouro-claro:#e0c58c; --ouro-escuro:#8a6a2b;
-  --fundo:#f4f2ee; --card:#fffdfa; --ink:#1d1a17; --mut:#6b645b; --line:#e0d9cb;
-  --bad:#a33a2e; --ok:#2e6b4a;
+  /* Cores tiradas do logotipo Cantus: pergaminho, dourado e tons litúrgicos */
+  --preto:#6e5124; --carvao:#3a2c1c;
+  --ouro:#b08a3e; --ouro-claro:#fbf3df; --ouro-escuro:#80602c;
+  --fundo:#f7f1e4; --card:#fffcf5; --ink:#2b2117; --mut:#74675a; --line:#e6dcc8;
+  --bad:#a33a2e; --ok:#3f6b3a;
+  --topo:#fdf8ee; --vermelho:#b8402c; --verde:#5d7d3e; --roxo:#6f4c8c; --azul:#3c6e86;
 }
 
 /* Modo escuro: segue a preferência do sistema/dispositivo automaticamente */
 @media (prefers-color-scheme: dark){
   :root{
-    --preto:#2b0c12; --carvao:#171310;
-    --ouro:#c9a05a; --ouro-claro:#e8cf9a; --ouro-escuro:#a9823c;
-    --fundo:#0e0c0a; --card:#1a1613; --ink:#efe9df; --mut:#a79e8e; --line:#332c24;
-    --bad:#e2685a; --ok:#4fae7b;
+    --preto:#8a6a2b; --carvao:#efe4cc;
+    --ouro:#c9a35a; --ouro-claro:#fff5df; --ouro-escuro:#d8b56e;
+    --fundo:#15110d; --card:#1f1913; --ink:#f1e9da; --mut:#b0a28c; --line:#3a3026;
+    --bad:#e2685a; --ok:#86b06d;
+    --topo:#1b1510;
   }
 }
 
 *{box-sizing:border-box}
 body{margin:0;background:var(--fundo);color:var(--ink);font:16px/1.55 "Jost","Segoe UI",system-ui,sans-serif}
-::selection{background:var(--ouro-claro)}
+::selection{background:#e6cf98;color:#2b2117}
+body{background:var(--fundo) radial-gradient(ellipse at 50% -10%, rgba(176,138,62,.08), transparent 60%) no-repeat}
 
-.topo{background:var(--preto);border-bottom:2px solid var(--ouro);text-align:center;padding:10px 0}
-.topo a{color:var(--ouro-claro);text-decoration:none;font:600 1.6rem/1.2 "Cormorant Garamond",Georgia,serif;letter-spacing:.04em}
-.topo small{display:block;font:400 .75rem "Jost",sans-serif;letter-spacing:.2em;text-transform:uppercase;color:var(--ouro)}
+.topo{background:var(--topo);border-bottom:1px solid var(--line);box-shadow:inset 0 -3px 0 -1px var(--ouro);padding:10px 16px}
+.topo a{display:flex;align-items:center;justify-content:center;gap:12px;text-decoration:none}
+.topo img{width:58px;height:auto;display:block}
+.topo .marca{display:flex;flex-direction:column;line-height:1}
+.topo .marca strong{font:600 2rem/1 "Cormorant Garamond",Georgia,serif;letter-spacing:.14em;color:var(--ouro-escuro)}
+.topo .marca small{font:500 1rem/1.2 "Cormorant Garamond",Georgia,serif;letter-spacing:.03em;color:var(--ouro-escuro);margin-top:2px}
+.capa{text-align:center;margin:12px 0 4px}
+.capa img{width:min(150px,40vw);height:auto;filter:drop-shadow(0 4px 14px rgba(176,138,62,.18))}
 
 h1,h2{font-family:"Cormorant Garamond",Georgia,serif;font-weight:600;color:var(--carvao);letter-spacing:.01em}
-@media (prefers-color-scheme: dark){ h1,h2{ color:var(--ink); } }
+
 h1{font-size:2rem;line-height:1.15;margin:0}
 h2{font-size:1.35rem;line-height:1.2;margin:0 0 .6rem}
 
 .wrap{max-width:720px;margin:0 auto;padding:22px 16px 56px}
-.card{background:var(--card);border:1px solid var(--line);border-top:2px solid var(--ouro);border-radius:3px;padding:16px;margin-bottom:14px;box-shadow:0 1px 2px rgba(29,26,23,.05)}
+.card{background:var(--card);border:1px solid var(--line);border-top:2px solid var(--ouro);border-radius:3px;padding:16px;margin-bottom:14px;box-shadow:0 1px 3px rgba(110,81,36,.07)}
 .card.late{border-left:4px solid var(--bad)}
 .off{opacity:.55}
 
@@ -41,9 +50,9 @@ input:focus,textarea:focus,select:focus,button:focus-visible{outline:2px solid v
 label{font-size:.85rem;color:var(--mut)}
 
 button{font:inherit;font-weight:500;letter-spacing:.03em;min-height:40px;background:var(--preto);color:var(--ouro-claro);border:1px solid var(--ouro);border-radius:3px;padding:8px 16px;cursor:pointer;transition:background .15s}
-button:hover{background:var(--carvao)}
+button:hover{filter:brightness(1.08)}
 button.sec{background:transparent;color:var(--ouro-escuro);border-color:var(--ouro)}
-button.sec:hover{background:rgba(184,147,74,.1)}
+button.sec:hover{background:rgba(176,138,62,.1)}
 button.wa{background:var(--ok);border-color:var(--ok);color:#fff}
 button:disabled{cursor:not-allowed}
 
@@ -55,7 +64,7 @@ button:disabled{cursor:not-allowed}
 .chips{display:flex;flex-wrap:wrap;gap:6px;margin-top:8px}
 .chip{min-height:0;padding:3px 11px;border-radius:99px;border:1px solid var(--line);background:var(--card);color:var(--mut);font-size:.8rem;letter-spacing:0}
 .chip:hover{background:var(--card)}
-.chip.on{background:var(--ouro);color:var(--preto);border-color:var(--ouro)}
+.chip.on{background:var(--ouro);color:#fffaf0;border-color:var(--ouro)}
 
 .mut{color:var(--mut);font-size:.92rem}
 .err{color:var(--bad)}

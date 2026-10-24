@@ -10,7 +10,7 @@ self.addEventListener('fetch', (event) => {
   const url = new URL(req.url);
   if (url.origin !== self.location.origin) return;
   const pagina = req.mode === 'navigate' && (url.pathname.startsWith('/missa/') || url.pathname.startsWith('/m/'));
-  const arquivo = url.pathname.startsWith('/_next/static/');
+  const arquivo = url.pathname.startsWith('/_next/static/') || url.pathname === '/emblema.webp';
   if (!pagina && !arquivo) return;
   event.respondWith(
     fetch(req).catch(() => caches.match(pagina ? url.pathname : req, { ignoreSearch: pagina })

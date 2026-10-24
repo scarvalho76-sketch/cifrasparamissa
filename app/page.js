@@ -43,7 +43,8 @@ export default function Login() {
   if (!pronto) return <div className="wrap mut">Carregando…</div>;
   return (
     <div className="wrap">
-      <div className="card" style={{ marginTop: 40 }}>
+      <div className="capa"><img src="/emblema.webp" alt="" /></div>
+      <div className="card" style={{ marginTop: 16 }}>
         <h1>Entrar</h1>
         <p className="mut">Área do administrador. Músicos entram pelo link pessoal.</p>
         <form onSubmit={entrar}>
