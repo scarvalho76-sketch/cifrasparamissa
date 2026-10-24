@@ -17,6 +17,21 @@ const quando = dataHoraCurta;
 const partes = i => String(i || '').split(/\s+e\s+/i).map(s => s.trim()).filter(Boolean);
 const tocaAlgo = i => partes(i).some(p => !/voz/i.test(p));
 
+// Data (aaaa-mm-dd) no horário de Brasília, para conferir o "dia da celebração"
+const diaBrasilia = s => new Intl.DateTimeFormat('en-CA', { timeZone: 'America/Sao_Paulo', year: 'numeric', month: '2-digit', day: '2-digit' }).format(new Date(s));
+
+// Convidado: depois do dia da celebração, apaga deste aparelho tudo o que foi guardado desta missa
+async function apagarCopiaDoConvidado(id) {
+  try {
+    [chaveLocal(id), chaveLocal(id) + ':leituras', chaveLocal(id) + ':pagina', chaveLocal(id) + ':ajustes', 'missa:convite:' + id]
+      .forEach(k => localStorage.removeItem(k));
+    // sem link de músico nem outra missa de convidado guardada, a Biblioteca também sai
+    const outros = Object.keys(localStorage).some(k => k.startsWith('missa:convite:'));
+    if (!localStorage.getItem('missa:token') && !outros) localStorage.removeItem('missa:biblioteca');
+  } catch {}
+  try { if ('caches' in window) { const c = await caches.open(CACHE); await c.delete('/missa/' + id, { ignoreSearch: true }); } } catch {}
+}
+
 function lerLocal(id) {
   try { const s = localStorage.getItem(chaveLocal(id)); return s ? JSON.parse(s) : null; } catch { return null; }
 }
@@ -209,6 +224,18 @@ export default function Cerimonia() {
   }
 
   useEffect(() => {
+    // Convidado com cópia guardada de um dia que já passou: apaga antes de mostrar qualquer coisa
+    let cvGuardado = null; try { cvGuardado = new URLSearchParams(location.search).get('c') || localStorage.getItem('missa:convite:' + escala); } catch {}
+    const copia = lerLocal(escala);
+    let tkMusico = null; try { tkMusico = localStorage.getItem('missa:token'); } catch {}
+    const ehDono = copia && (copia.pode_convidar || (!copia.convidado && tkMusico));
+    if (cvGuardado && copia && !ehDono && diaBrasilia(copia.data_hora) !== diaBrasilia(Date.now())) {
+      apagarCopiaDoConvidado(escala);
+      setConvite(cvGuardado);
+      setErro('Este link de convidado só vale no dia da celebração. A cópia guardada neste aparelho foi apagada.');
+      setD(null);
+      return;
+    }
     try { const b = JSON.parse(localStorage.getItem('missa:biblioteca') || 'null'); if (Array.isArray(b)) setBiblioteca(b); } catch {}
     const local = lerLocal(escala);
     if (local) setD(local);
