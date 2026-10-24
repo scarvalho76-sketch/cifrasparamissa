@@ -24,7 +24,8 @@ export default function Login() {
   useEffect(() => {
     (async () => {
       const { data: { session } } = await supabase.auth.getSession();
-      if (!session) {
+      const querEntrar = new URLSearchParams(location.search).has('entrar');
+      if (!session && !querEntrar) {
         let token = null; try { token = localStorage.getItem('missa:token'); } catch {}
         if (token) return r.replace('/m/' + token);
       }
