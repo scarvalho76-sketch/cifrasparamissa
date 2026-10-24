@@ -48,6 +48,7 @@ input,textarea,select{font:inherit;color:var(--ink)}
 input,textarea{width:100%;padding:10px 12px;border:1px solid var(--line);border-radius:3px;margin:4px 0 12px;background:var(--card)}
 input:focus,textarea:focus,select:focus,button:focus-visible{outline:2px solid var(--ouro);outline-offset:1px}
 label{font-size:.85rem;color:var(--mut)}
+a{color:var(--ouro-escuro)}
 
 button{font:inherit;font-weight:500;letter-spacing:.03em;min-height:40px;background:var(--preto);color:var(--ouro-claro);border:1px solid var(--ouro);border-radius:3px;padding:8px 16px;cursor:pointer;transition:background .15s}
 button:hover{filter:brightness(1.08)}
@@ -78,6 +79,8 @@ details.card summary{cursor:pointer}
 .cer .cer-cab:hover{background:transparent}
 .cer .cer-num{flex:none;width:30px;height:30px;border-radius:50%;border:1px solid var(--ouro);display:flex;align-items:center;justify-content:center;font-size:.85rem;color:var(--ouro-escuro)}
 .cer .cer-obs{margin:8px 0 0;padding:8px 12px;border-left:3px solid var(--ouro);background:var(--fundo);font-style:italic;line-height:1.5}
+.cer .cer-leitura{border-top-color:var(--line);background:var(--fundo)}
+.cer .cer-leitura.cer-ativo{background:var(--card)}
 .cer .cer-sem{border-style:dashed;font-size:.75rem}
 .cer .cer-momento{display:block;font-size:.8rem;text-transform:uppercase;letter-spacing:.06em;color:var(--mut)}
 .cer .cer-musica{display:block;font-weight:600;font-size:1.05rem}

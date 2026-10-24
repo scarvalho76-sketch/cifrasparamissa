@@ -2,7 +2,7 @@
 import { useEffect, useRef, useState } from 'react';
 import { useParams } from 'next/navigation';
 import { supabase } from '@/lib/supabase';
-import { dataLonga, dataHoraCurta } from '@/lib/util';
+import { dataLonga, dataHoraCurta, dataIso } from '@/lib/util';
 import { transporCifra, distancia, nomeDoTom, lerTom, gerarGrade, letraDaCifra } from '@/lib/musica';
 
 // Modo celebração: só aquela missa, momento a momento (adaptado do Modo cerimônia do Sonata Casamentos).
@@ -82,6 +82,7 @@ export default function Cerimonia() {
   const [fonte, setFonte] = useState(1);
   const [formato, setFormato] = useState(null);
   const [usaCapo, setUsaCapo] = useState(null);
+  const [leituras, setLeituras] = useState(null); // da Liturgia Diária (CNBB), guardadas só no aparelho
   useTelaAcesa();
   useEffect(() => {
     setAjustes(lerPref(chaveLocal(escala) + ':ajustes', {}));
@@ -97,9 +98,22 @@ export default function Cerimonia() {
   const mudarFormato = v => { setFormato(v); gravarPref('missa:formato', v); };
   const mudarCapo = v => { setUsaCapo(v); gravarPref('missa:capo', v); };
 
+  // Leituras do dia (primeira, segunda quando houver, Evangelho), consultadas no site da CNBB
+  async function carregarLeituras(dataHora) {
+    try {
+      const r = await fetch(`/api/liturgia?data=${dataIso(dataHora)}&completo=1`);
+      if (!r.ok) return;
+      const l = await r.json();
+      if (!l?.leituras?.length) return;
+      setLeituras(l.leituras);
+      try { localStorage.setItem(chaveLocal(escala) + ':leituras', JSON.stringify({ data: dataIso(dataHora), leituras: l.leituras })); } catch {}
+    } catch {}
+  }
+
   useEffect(() => {
     const local = lerLocal(escala);
     if (local) setD(local);
+    try { const g = JSON.parse(localStorage.getItem(chaveLocal(escala) + ':leituras') || 'null'); if (g && local && g.data === dataIso(local.data_hora)) setLeituras(g.leituras); } catch {}
     try { setBaixado(localStorage.getItem(chaveLocal(escala) + ':pagina') === '1'); } catch {}
     setOnline(navigator.onLine);
     const on = () => setOnline(true), off = () => setOnline(false);
@@ -112,6 +126,7 @@ export default function Cerimonia() {
         const { data, error } = await supabase.rpc('missa_dados', { p_id: escala, p_token: tk });
         if (error) throw error;
         setD(data); gravarLocal(escala, data); setErro('');
+        carregarLeituras(data.data_hora);
       } catch (e) {
         if (!local) setErro(navigator.onLine ? (e.message || 'Não foi possível abrir.') : 'Sem internet e esta missa ainda não foi guardada neste aparelho.');
       }
@@ -125,6 +140,7 @@ export default function Cerimonia() {
       const { data, error } = await supabase.rpc('missa_dados', { p_id: escala, p_token: token });
       if (error) throw error;
       setD(data); gravarLocal(escala, data);
+      await carregarLeituras(data.data_hora);
       await guardarPagina();
       try { localStorage.setItem(chaveLocal(escala) + ':pagina', '1'); } catch {}
       setBaixado(true); setMsg('Pronto: esta missa abre neste aparelho mesmo sem internet.');
@@ -198,6 +214,35 @@ export default function Cerimonia() {
           </div>
         )}
       </div>
+
+      {(leituras || []).map((L, k) => {
+        const chave = 'L' + k;
+        const ativo = aberto === chave;
+        const proxima = leituras[k + 1];
+        return (
+          <div key={chave} ref={el => { refs.current[chave] = el; }} className={'card cer-mom cer-leitura' + (ativo ? ' cer-ativo' : '')}>
+            <button type="button" className="cer-cab" onClick={() => abrir(chave)} aria-expanded={ativo}>
+              <span className="cer-num cer-sem">{L.tipo === 'evangelho' ? '✝' : L.tipo === 'primeira' ? 'I' : 'II'}</span>
+              <span style={{ flex: 1, textAlign: 'left' }}>
+                <span className="cer-momento">{L.titulo}</span>
+                <span className="cer-musica">{L.sigla || L.referencia || L.abertura}</span>
+              </span>
+              <span aria-hidden="true">{ativo ? '▾' : '▸'}</span>
+            </button>
+            {L.resumo && <p className="cer-obs">{L.resumo}</p>}
+            {ativo && (
+              <div style={{ marginTop: 12 }}>
+                <p style={{ margin: '0 0 8px', fontWeight: 600 }}>{L.abertura} <span className="mut">{L.referencia}</span></p>
+                <pre className="cer-letra" style={{ fontSize: `${1.05 * fonte}rem` }}>{L.texto}</pre>
+                <p className="mut" style={{ fontSize: '.8rem', margin: '6px 0 0' }}>Fonte: <a href="https://liturgiadiaria.edicoescnbb.com.br/" target="_blank" rel="noreferrer">Liturgia Diária · Edições CNBB</a></p>
+                {proxima
+                  ? <button className="cer-prox" onClick={() => abrir('L' + (k + 1))}>Próximo ▸ {proxima.titulo}</button>
+                  : itens.length > 0 && <button className="cer-prox" onClick={() => abrir(0)}>Próximo ▸ {itens[0].momento}</button>}
+              </div>
+            )}
+          </div>
+        );
+      })}
 
       {itens.map((i, n) => {
         // Transposição: do tom em que a cifra foi escrita para o tom do cantor, mais o ajuste manual
