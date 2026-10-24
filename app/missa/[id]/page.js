@@ -2,7 +2,7 @@
 import { useEffect, useRef, useState } from 'react';
 import { useParams } from 'next/navigation';
 import { supabase } from '@/lib/supabase';
-import { dataLonga, dataHoraCurta, dataIso } from '@/lib/util';
+import { dataLonga, dataHoraCurta, dataIso, simples } from '@/lib/util';
 import { transporCifra, distancia, nomeDoTom, lerTom, gerarGrade, letraDaCifra } from '@/lib/musica';
 
 // Modo celebração: só aquela missa, momento a momento (adaptado do Modo cerimônia do Sonata Casamentos).
@@ -121,6 +121,31 @@ function Rolagem({ alvoId }) {
   );
 }
 
+// Música avulsa (ex.: cantada durante a homilia): busca na Biblioteca, sem registrar na missa
+function BuscaAvulsa({ biblioteca, escolhida, onEscolher }) {
+  const [busca, setBusca] = useState('');
+  if (escolhida) return (
+    <div className="row" style={{ marginBottom: 8 }}>
+      <span className="mut" style={{ fontSize: '.9rem' }}>Música escolhida só para agora (não fica registrada na missa)</span>
+      <button type="button" className="sec cer-mini" onClick={() => onEscolher(null)}>Trocar música</button>
+    </div>
+  );
+  if (!biblioteca) return <p className="mut">Abra esta missa com internet uma vez para poder buscar músicas.</p>;
+  const t = simples(busca);
+  const achadas = t ? biblioteca.filter(m => simples(m.nome + ' ' + m.artista).includes(t)).slice(0, 12) : [];
+  return (
+    <div style={{ marginBottom: 8 }}>
+      <input type="search" value={busca} onChange={e => setBusca(e.target.value)} placeholder="Digite o nome da música" autoComplete="off" style={{ marginBottom: 6 }} />
+      {t && achadas.length === 0 && <p className="mut">Nenhuma música encontrada.</p>}
+      {achadas.map(m => (
+        <button key={m.id} type="button" className="sec cer-achada" onClick={() => onEscolher(m.id)}>
+          <strong>{m.nome}</strong>{m.artista ? <span className="mut"> · {m.artista}</span> : null}
+        </button>
+      ))}
+    </div>
+  );
+}
+
 function Selo({ children, forte }) {
   return <span className={'chip' + (forte ? ' on' : '')} style={{ cursor: 'default' }}>{children}</span>;
 }
@@ -142,6 +167,8 @@ export default function Cerimonia() {
   const [usaCapo, setUsaCapo] = useState(null);
   const [leituras, setLeituras] = useState(null); // da Liturgia Diária (CNBB), guardadas só no aparelho
   const [salmo, setSalmo] = useState(null);
+  const [biblioteca, setBiblioteca] = useState(null); // para a música avulsa
+  const [avulsa, setAvulsa] = useState(null);
   useTelaAcesa();
   useEffect(() => {
     setAjustes(lerPref(chaveLocal(escala) + ':ajustes', {}));
@@ -169,7 +196,18 @@ export default function Cerimonia() {
     } catch {}
   }
 
+  // Biblioteca para a música avulsa: consultada com internet e guardada no aparelho
+  async function carregarBiblioteca(tk) {
+    try {
+      const { data, error } = await supabase.rpc('missa_biblioteca', { p_token: tk });
+      if (error || !Array.isArray(data)) return;
+      setBiblioteca(data);
+      try { localStorage.setItem('missa:biblioteca', JSON.stringify(data)); } catch {}
+    } catch {}
+  }
+
   useEffect(() => {
+    try { const b = JSON.parse(localStorage.getItem('missa:biblioteca') || 'null'); if (Array.isArray(b)) setBiblioteca(b); } catch {}
     const local = lerLocal(escala);
     if (local) setD(local);
     try { const g = JSON.parse(localStorage.getItem(chaveLocal(escala) + ':leituras') || 'null'); if (g && local && g.data === dataIso(local.data_hora)) { setLeituras(g.leituras); setSalmo(g.salmo || null); } } catch {}
@@ -186,6 +224,7 @@ export default function Cerimonia() {
         if (error) throw error;
         setD(data); gravarLocal(escala, data); setErro('');
         carregarLeituras(data.data_hora);
+        carregarBiblioteca(tk);
       } catch (e) {
         if (!local) setErro(navigator.onLine ? (e.message || 'Não foi possível abrir.') : 'Sem internet e esta missa ainda não foi guardada neste aparelho.');
       }
@@ -200,6 +239,7 @@ export default function Cerimonia() {
       if (error) throw error;
       setD(data); gravarLocal(escala, data);
       await carregarLeituras(data.data_hora);
+      await carregarBiblioteca(token);
       await guardarPagina();
       try { localStorage.setItem(chaveLocal(escala) + ':pagina', '1'); } catch {}
       setBaixado(true); setMsg('Pronto: esta missa abre neste aparelho mesmo sem internet.');
@@ -240,6 +280,15 @@ export default function Cerimonia() {
   if (salmo && !itens.some(ehSalmo)) {
     const v = { id: 'salmo-cnbb', momento: 'Salmo', numero: 4, obs: '' };
     const k = itens.findIndex(i => i.numero && i.numero > 4);
+    itens = k >= 0 ? [...itens.slice(0, k), v, ...itens.slice(k)] : [...itens, v];
+  }
+  // Música avulsa: seção sem número entre a Aclamação (5) e o Ofertório (6)
+  const escolhida = avulsa && biblioteca ? biblioteca.find(m => m.id === avulsa) : null;
+  {
+    const v = { id: escolhida ? 'avulsa-' + escolhida.id : 'avulsa', momento: 'Música avulsa', numero: null, obs: '', avulsa: true,
+      ...(escolhida ? { nome: escolhida.nome, artista: escolhida.artista, cifra: escolhida.cifra, letra: escolhida.letra, grade: escolhida.grade,
+        tom_original: escolhida.tom_original, tom: escolhida.tom_padrao || escolhida.tom_original, capo: escolhida.capo || 0 } : {}) };
+    const k = itens.findIndex(i => i.numero && i.numero > 5);
     itens = k >= 0 ? [...itens.slice(0, k), v, ...itens.slice(k)] : [...itens, v];
   }
   // Capotraste: quem toca violão vê as formas dos acordes com o capo; tecladista vê a cifra no tom real
@@ -326,7 +375,7 @@ export default function Cerimonia() {
         const letraVista = i.letra || letraDaCifra(i.cifra);
         const base = mostraCifra ? (querGrade ? (i.grade || gradeAuto || i.cifra) : i.cifra) : letraVista;
         const texto = mostraCifra ? transporCifra(base, total - capo, capo ? forma : (ajuste === 0 && auto !== null ? i.tom : destino)) : base;
-        const falta = !i.nome ? 'Nenhuma música escolhida para este momento.' : mostraCifra ? 'A cifra desta música ainda não foi cadastrada.' : 'A letra desta música ainda não foi cadastrada.';
+        const falta = i.avulsa && !i.nome ? '' : !i.nome ? 'Nenhuma música escolhida para este momento.' : mostraCifra ? 'A cifra desta música ainda não foi cadastrada.' : 'A letra desta música ainda não foi cadastrada.';
         let aviso = '';
         if (mostraCifra && i.cifra && i.tom && !i.tom_original) aviso = 'O tom original desta cifra não foi cadastrado, por isso ela não foi transposta automaticamente. Use os botões de meio tom se precisar.';
         else if (mostraCifra && i.cifra && i.tom && i.tom_original && auto === null) aviso = `Não foi possível transpor automaticamente (tom: “${i.tom}”). A cifra está no tom original${lerTom(i.tom_original) ? ` (${i.tom_original})` : ''}.`;
@@ -334,10 +383,10 @@ export default function Cerimonia() {
         return (
           <div key={i.id} ref={el => { refs.current[n] = el; }} className={'card cer-mom' + (ativo ? ' cer-ativo' : '')}>
             <button type="button" className="cer-cab" onClick={() => abrir(n)} aria-expanded={ativo}>
-              <span className={'cer-num' + (i.numero ? '' : ' cer-sem')}>{i.numero || '✦'}</span>
+              <span className={'cer-num' + (i.numero ? '' : ' cer-sem')}>{i.numero || (i.avulsa ? '♪' : '✦')}</span>
               <span style={{ flex: 1, textAlign: 'left' }}>
                 <span className="cer-momento">{i.momento}</span>
-                <span className="cer-musica">{i.nome || (salmo && ehSalmo(i) ? salmo.referencia || 'Salmo do dia' : <span className="mut">sem música escolhida</span>)}{i.nome && i.artista ? <span className="mut"> · {i.artista}</span> : null}</span>
+                <span className="cer-musica">{i.nome || (i.avulsa ? <span className="mut">Buscar música por nome</span> : salmo && ehSalmo(i) ? salmo.referencia || 'Salmo do dia' : <span className="mut">sem música escolhida</span>)}{i.nome && i.artista ? <span className="mut"> · {i.artista}</span> : null}</span>
               </span>
               <span aria-hidden="true">{ativo ? '▾' : '▸'}</span>
             </button>
@@ -350,6 +399,7 @@ export default function Cerimonia() {
             {i.obs && i.obs.length > 40 && <p className="cer-obs">{/^aclama/i.test(i.momento) ? <><strong>V.</strong> </> : null}{i.obs}</p>}
             {ativo && (
               <div style={{ marginTop: 12 }}>
+                {i.avulsa && <BuscaAvulsa biblioteca={biblioteca} escolhida={escolhida} onEscolher={setAvulsa} />}
                 {mostraCifra && base && (
                   <div className="row" style={{ marginBottom: 8 }}>
                     <span style={{ fontSize: '.9rem' }}>
@@ -368,7 +418,7 @@ export default function Cerimonia() {
                 {aviso && <p className="err" style={{ fontSize: '.9rem' }}>{aviso}</p>}
                 {gradeAuto && <p className="mut" style={{ fontSize: '.9rem' }}>Grade montada automaticamente a partir da cifra, com um acorde por compasso: pode não corresponder aos compassos reais.</p>}
                 {querGrade && !i.grade && !gradeAuto && i.cifra && <p className="mut" style={{ fontSize: '.9rem' }}>Não foi possível montar a grade desta cifra; mostrando a cifra.</p>}
-                {texto ? <pre className={mostraCifra ? 'cer-cifra' : 'cer-letra'} style={{ fontSize: `${(mostraCifra ? 1 : 1.15) * fonte}rem` }}>{texto}</pre> : !(salmo && ehSalmo(i)) && <p className="mut">{falta}</p>}
+                {texto ? <pre className={mostraCifra ? 'cer-cifra' : 'cer-letra'} style={{ fontSize: `${(mostraCifra ? 1 : 1.15) * fonte}rem` }}>{texto}</pre> : !(salmo && ehSalmo(i)) && falta && <p className="mut">{falta}</p>}
                 {salmo && ehSalmo(i) && (
                   <div style={{ marginTop: texto ? 14 : 0 }}>
                     <p style={{ margin: '0 0 8px', fontWeight: 600 }}>Salmo do dia <span className="mut">{salmo.referencia}</span></p>
