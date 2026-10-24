@@ -113,7 +113,7 @@ function BuscarAntifona({ data, onAchou }) {
   );
 }
 
-function Item({ it, n, total, numero, data, musicas, porMomento, indicadas, onMudar, onMover, onTirar, onDuplicar }) {
+function Item({ it, n, total, numero, data, musicas, porMomento, indicadas, onMudar, onTirar, onDuplicar }) {
   const m = musicas.find(x => x.id === it.musica_id);
   // Só as músicas marcadas na Biblioteca para este momento
   const doMomento = indicadas[it.momento.toLowerCase()] || new Set();
@@ -126,8 +126,6 @@ function Item({ it, n, total, numero, data, musicas, porMomento, indicadas, onMu
       <div className="item-cab">
         <span className="item-mom">{numero ? numero + '. ' : ''}{it.momento}</span>
         <span className="row" style={{ gap: 4 }}>
-          <button className="sec mini" onClick={() => onMover(-1)} disabled={n === 0} aria-label="Subir">▲</button>
-          <button className="sec mini" onClick={() => onMover(1)} disabled={n === total - 1} aria-label="Descer">▼</button>
           <button className="sec mini" onClick={onDuplicar} title="Mais uma música neste momento">+1</button>
           <button className="sec mini" onClick={onTirar} aria-label="Tirar este momento">✕</button>
         </span>
@@ -185,10 +183,7 @@ function Detalhe({ id, musicos, musicas, porMomento, indicadas, momentos, onFech
     if (error) { setMsg('Não foi possível salvar: ' + error.message); carregar(); }
     onMudou();
   }
-  async function mover(n, d) {
-    const nova = [...itens]; [nova[n], nova[n + d]] = [nova[n + d], nova[n]];
-    setItens(nova); await renumerar(nova); carregar();
-  }
+
   async function tirar(it) {
     if (it.musica_id && !confirm(`Tirar o momento "${it.momento}" desta missa?`)) return;
     await supabase.from('missa_itens').delete().eq('id', it.id); carregar(); onMudou();
@@ -275,7 +270,7 @@ function Detalhe({ id, musicos, musicas, porMomento, indicadas, momentos, onFech
       <div>
         {itens.map((it, n) => (
           <Item key={it.id} it={it} n={n} total={itens.length} data={c.data_hora} numero={numeroDe[it.momento.toLowerCase()]} musicas={musicas} porMomento={porMomento} indicadas={indicadas}
-            onMudar={campos => mudarItem(it, campos)} onMover={d => mover(n, d)} onTirar={() => tirar(it)} onDuplicar={() => inserir(it.momento, n)} />
+            onMudar={campos => mudarItem(it, campos)} onTirar={() => tirar(it)} onDuplicar={() => inserir(it.momento, n)} />
         ))}
       </div>
       <div className="row" style={{ marginTop: 10, justifyContent: 'flex-start' }}>
