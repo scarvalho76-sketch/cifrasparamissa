@@ -26,7 +26,7 @@ export default function Amigos() {
   async function salvar() {
     setMsg('');
     if (!f.nome.trim()) return setMsg('Informe o nome.');
-    const dados = { nome: f.nome.trim(), telefone: f.telefone ? normalizarTelefone(f.telefone) : '' };
+    const dados = { nome: f.nome.trim(), telefone: f.telefone ? normalizarTelefone(f.telefone) : '', funcao: f.funcao || 'instrumentista' };
     const { error } = f.id ? await supabase.from('missa_contas').update(dados).eq('id', f.id) : await supabase.from('missa_contas').insert(dados);
     if (error) return setMsg('Não foi possível salvar: ' + error.message);
     setF(null); carregar();
@@ -50,6 +50,12 @@ export default function Amigos() {
       <h2>{f.id ? 'Editar amigo' : 'Novo amigo'}</h2>
       <label>Nome</label><input value={f.nome} onChange={e => setF({ ...f, nome: e.target.value })} />
       <label>WhatsApp (com DDD)</label><input value={f.telefone} onChange={e => setF({ ...f, telefone: e.target.value })} inputMode="tel" />
+      <label>No Modo celebração, ele é</label>
+      <div className="chips" style={{ margin: '4px 0 12px' }}>
+        {[['cantor', '🎤 Cantor (abre a letra)'], ['instrumentista', '🎸 Instrumentista (abre a cifra)']].map(([k, t]) => (
+          <button key={k} type="button" className={'chip' + ((f.funcao || 'instrumentista') === k ? ' on' : '')} onClick={() => setF({ ...f, funcao: k })}>{t}</button>
+        ))}
+      </div>
       {msg && <p className="err">{msg}</p>}
       <div className="row" style={{ justifyContent: 'flex-start' }}>
         <button onClick={salvar}>Salvar</button>
@@ -62,7 +68,7 @@ export default function Amigos() {
     <>
       <div className="row" style={{ marginBottom: 12 }}>
         <h2 style={{ margin: 0 }}>Amigos</h2>
-        {!f && <button className="sec" onClick={() => setF({ nome: '', telefone: '' })}>+ Novo amigo</button>}
+        {!f && <button className="sec" onClick={() => setF({ nome: '', telefone: '', funcao: 'instrumentista' })}>+ Novo amigo</button>}
       </div>
       <p className="mut">Cada amigo entra pelo próprio link e tem as próprias missas (por enquanto, sem cadastro de músicos). A Biblioteca de músicas e a lista de momentos são as mesmas para todos: os amigos consultam e escolhem as músicas, mas só você cadastra e altera. Você não vê as missas deles, e eles não veem as suas.</p>
       {f && !f.id && Form()}
@@ -70,7 +76,7 @@ export default function Amigos() {
       {lista.map(a => f?.id === a.id ? <div key={a.id}>{Form()}</div> : (
         <div key={a.id} className={'card' + (a.ativo ? '' : ' off')}>
           <div className="row">
-            <span><strong>{a.nome}</strong>{!a.ativo && <span className="mut"> · desativado</span>}
+            <span><strong>{a.nome}</strong><span className="mut"> · {a.funcao === 'cantor' ? 'Cantor' : 'Instrumentista'}</span>{!a.ativo && <span className="mut"> · desativado</span>}
               <div className="mut" style={{ fontSize: '.85rem' }}>{resumo[a.id] ? `${resumo[a.id].missas} ${resumo[a.id].missas === 1 ? 'missa' : 'missas'} · ${resumo[a.id].musicos} ${resumo[a.id].musicos === 1 ? 'músico' : 'músicos'}` : 'Ainda sem missas'}</div>
             </span>
             <button className="sec mini" onClick={() => setF({ ...a, telefone: a.telefone || '' })}>Editar</button>
