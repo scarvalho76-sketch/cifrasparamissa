@@ -317,13 +317,21 @@ export default function Cerimonia() {
     const k = itens.findIndex(i => i.numero && i.numero > 4);
     itens = k >= 0 ? [...itens.slice(0, k), v, ...itens.slice(k)] : [...itens, v];
   }
+  // Leituras do dia na ordem da missa: Primeira antes do Salmo (4), Segunda depois do Salmo,
+  // Evangelho depois da Aclamação (5)
+  const antesDoNumero = (lim, v) => { const k = itens.findIndex(i => i.numero && i.numero >= lim); itens = k >= 0 ? [...itens.slice(0, k), v, ...itens.slice(k)] : [...itens, v]; };
+  for (const L of leituras || []) {
+    const v = { id: 'leitura-' + L.tipo, leitura: L, momento: L.titulo, numero: null };
+    antesDoNumero(L.tipo === 'primeira' ? 4 : L.tipo === 'segunda' ? 5 : 6, v);
+  }
   // Música durante a homilia: seção sem número entre a Aclamação (5) e o Ofertório (6)
   const escolhida = avulsa && biblioteca ? biblioteca.find(m => m.id === avulsa) : null;
   {
     const v = { id: escolhida ? 'avulsa-' + escolhida.id : 'avulsa', momento: 'Música durante a homilia', numero: null, obs: '', avulsa: true,
       ...(escolhida ? { nome: escolhida.nome, artista: escolhida.artista, cifra: escolhida.cifra, letra: escolhida.letra, grade: escolhida.grade,
         tom_original: escolhida.tom_original, tom: escolhida.tom_padrao || escolhida.tom_original, capo: escolhida.capo || 0 } : {}) };
-    const k = itens.findIndex(i => i.numero && i.numero > 5);
+    const ev = itens.findIndex(i => i.leitura?.tipo === 'evangelho');
+    const k = ev >= 0 ? ev + 1 : itens.findIndex(i => i.numero && i.numero > 5);
     itens = k >= 0 ? [...itens.slice(0, k), v, ...itens.slice(k)] : [...itens, v];
   }
   // Capotraste: quem toca violão vê as formas dos acordes com o capo; tecladista vê a cifra no tom real
@@ -366,36 +374,36 @@ export default function Cerimonia() {
         )}
       </div>
 
-      {(leituras || []).map((L, k) => {
-        const chave = 'L' + k;
-        const ativo = aberto === chave;
-        const proxima = leituras[k + 1];
-        return (
-          <div key={chave} ref={el => { refs.current[chave] = el; }} className={'card cer-mom cer-leitura' + (ativo ? ' cer-ativo' : '')}>
-            <button type="button" className="cer-cab" onClick={() => abrir(chave)} aria-expanded={ativo}>
-              <span className="cer-num cer-sem">{L.tipo === 'evangelho' ? '✝' : L.tipo === 'primeira' ? 'I' : 'II'}</span>
-              <span style={{ flex: 1, textAlign: 'left' }}>
-                <span className="cer-momento">{L.titulo}</span>
-                <span className="cer-musica">{L.sigla || L.referencia || L.abertura}</span>
-              </span>
-              <span aria-hidden="true">{ativo ? '▾' : '▸'}</span>
-            </button>
-            {L.resumo && <p className="cer-obs">{L.resumo}</p>}
-            {ativo && (
-              <div style={{ marginTop: 12 }}>
-                <p style={{ margin: '0 0 8px', fontWeight: 600 }}>{L.abertura} <span className="mut">{L.referencia}</span></p>
-                <pre className="cer-letra" style={{ fontSize: `${1.05 * fonte}rem` }}>{L.texto}</pre>
-                <p className="mut" style={{ fontSize: '.8rem', margin: '6px 0 0' }}>Fonte: <a href="https://liturgiadiaria.edicoescnbb.com.br/" target="_blank" rel="noreferrer">Liturgia Diária · Edições CNBB</a></p>
-                {proxima
-                  ? <button className="cer-prox" onClick={() => abrir('L' + (k + 1))}>Próximo ▸ {proxima.titulo}</button>
-                  : itens.length > 0 && <button className="cer-prox" onClick={() => abrir(0)}>Próximo ▸ {itens[0].momento}</button>}
-              </div>
-            )}
-          </div>
-        );
-      })}
-
       {itens.map((i, n) => {
+        // Leituras intercaladas com os momentos (Primeira antes do Salmo, Segunda depois, Evangelho após a Aclamação)
+        if (i.leitura) {
+          const L = i.leitura;
+          const ativo = aberto === n;
+          return (
+            <div key={i.id} ref={el => { refs.current[n] = el; }} className={'card cer-mom cer-leitura' + (ativo ? ' cer-ativo' : '')}>
+              <button type="button" className="cer-cab" onClick={() => abrir(n)} aria-expanded={ativo}>
+                <span className="cer-num cer-sem">{L.tipo === 'evangelho' ? '✝' : L.tipo === 'primeira' ? 'I' : 'II'}</span>
+                <span style={{ flex: 1, textAlign: 'left' }}>
+                  <span className="cer-momento">{L.titulo}</span>
+                  <span className="cer-musica">{L.sigla || L.referencia || L.abertura}</span>
+                </span>
+                <span aria-hidden="true">{ativo ? '▾' : '▸'}</span>
+              </button>
+              {L.resumo && <p className="cer-obs">{L.resumo}</p>}
+              {ativo && (
+                <div style={{ marginTop: 12 }}>
+                  <p style={{ margin: '0 0 8px', fontWeight: 600 }}>{L.abertura} <span className="mut">{L.referencia}</span></p>
+                  <pre className="cer-letra" style={{ fontSize: `${1.05 * fonte}rem` }}>{L.texto}</pre>
+                  <p className="mut" style={{ fontSize: '.8rem', margin: '6px 0 0' }}>Fonte: <a href="https://liturgiadiaria.edicoescnbb.com.br/" target="_blank" rel="noreferrer">Liturgia Diária · Edições CNBB</a></p>
+                  <div id={'fim-' + n}>
+                    {n < itens.length - 1 && <button className="cer-prox" onClick={() => abrir(n + 1)}>Próximo ▸ {itens[n + 1].momento}</button>}
+                  </div>
+                  <Rolagem key={i.id} alvoId={'fim-' + n} />
+                </div>
+              )}
+            </div>
+          );
+        }
         // Transposição: do tom em que a cifra foi escrita para o tom do cantor, mais o ajuste manual
         const auto = mostraCifra && i.tom && i.tom_original ? distancia(i.tom_original, i.tom) : null;
         const ajuste = ajustes[i.id] || 0;
