@@ -165,6 +165,11 @@ function BuscaAvulsa({ biblioteca, escolhida, onEscolher }) {
   );
 }
 
+// Partes entre colchetes ([Refrão], [Intro], [Final]...) em negrito
+function destacarPartes(texto) {
+  return String(texto).split(/(\[[^\]\n]+\])/).map((t, k) => k % 2 ? <strong key={k} className="cer-parte">{t}</strong> : t);
+}
+
 function Selo({ children, forte }) {
   return <span className={'chip' + (forte ? ' on' : '')} style={{ cursor: 'default' }}>{children}</span>;
 }
@@ -511,7 +516,7 @@ export default function Cerimonia() {
                 {aviso && <p className="err" style={{ fontSize: '.9rem' }}>{aviso}</p>}
                 {gradeAuto && <p className="mut" style={{ fontSize: '.9rem' }}>Grade montada automaticamente a partir da cifra, com um acorde por compasso: pode não corresponder aos compassos reais.</p>}
                 {querGrade && !i.grade && !gradeAuto && i.cifra && <p className="mut" style={{ fontSize: '.9rem' }}>Não foi possível montar a grade desta cifra; mostrando a cifra.</p>}
-                {texto ? <pre className={mostraCifra ? 'cer-cifra' : 'cer-letra'} style={{ fontSize: `${(mostraCifra ? 1 : 1.15) * fonte}rem` }}>{texto}</pre> : !(salmo && ehSalmo(i)) && falta && <p className="mut">{falta}</p>}
+                {texto ? <pre className={mostraCifra ? 'cer-cifra' : 'cer-letra'} style={{ fontSize: `${(mostraCifra ? 1 : 1.15) * fonte}rem` }}>{destacarPartes(texto)}</pre> : !(salmo && ehSalmo(i)) && falta && <p className="mut">{falta}</p>}
                 {salmo && ehSalmo(i) && (
                   <div style={{ marginTop: texto ? 14 : 0 }}>
                     <p style={{ margin: '0 0 8px', fontWeight: 600 }}>Salmo do dia <span className="mut">{salmo.referencia}</span></p>
