@@ -3,7 +3,7 @@ import { useEffect, useMemo, useState } from 'react';
 import { supabase } from '@/lib/supabase';
 import { gerarGrade, lerTom, letraDaCifra, nomeDoTom } from '@/lib/musica';
 import { lerPdfDeCifra } from '@/lib/pdfCifra';
-import { chave, simples, dataCurta, TEMPOS_ESPECIFICOS } from '@/lib/util';
+import { chave, simples, dataCurta, TEMPOS_ESPECIFICOS, nomeTempo } from '@/lib/util';
 import { ehConta } from '@/lib/conta';
 
 // Biblioteca de letras e cifras das missas: uma ficha por música (nome + artista).
@@ -239,7 +239,7 @@ export default function Biblioteca() {
         <select value={tempoFiltro} onChange={e => setTempoFiltro(e.target.value)} style={{ flex: '0 1 220px' }}>
           <option value="">Qualquer tempo</option>
           <option value="todos">Só de todos os tempos</option>
-          {TEMPOS_ESPECIFICOS.map(t => <option key={t} value={t}>Só {t}</option>)}
+          {TEMPOS_ESPECIFICOS.map(t => <option key={t} value={t}>Só {nomeTempo(t)}</option>)}
         </select>
       </div>
       {vis.length === 0 && <div className="card mut">{fichas.length ? 'Nenhuma música encontrada.' : (leitura ? 'A Biblioteca ainda está vazia.' : 'A Biblioteca está vazia. Importe PDFs do Cifra Club ou cadastre uma música.')}</div>}
@@ -268,12 +268,12 @@ export default function Biblioteca() {
           <div className="chips" aria-label="Tempos litúrgicos desta música" style={{ alignItems: 'center' }}>
             <span className="mut" style={{ fontSize: '.85rem', marginRight: 2 }}>Tempos:</span>
             {leitura
-              ? <span className={'chip' + (x.tempos?.length ? ' on' : '')} style={{ cursor: 'default' }}>{x.tempos?.length ? x.tempos.join(', ') : 'Todos os tempos'}</span>
+              ? <span className={'chip' + (x.tempos?.length ? ' on' : '')} style={{ cursor: 'default' }}>{x.tempos?.length ? x.tempos.map(nomeTempo).join(', ') : 'Todos os tempos'}</span>
               : <>
                 <button className={'chip' + (x.tempos?.length ? '' : ' on')} onClick={() => mudarTempos(x, [])}>{x.tempos?.length ? '' : '✓ '}Todos</button>
                 {TEMPOS_ESPECIFICOS.map(t => {
                   const on = (x.tempos || []).includes(t);
-                  return <button key={t} className={'chip' + (on ? ' on' : '')} onClick={() => mudarTempos(x, on ? x.tempos.filter(y => y !== t) : [...(x.tempos || []), t])}>{on ? '✓ ' : ''}{t}</button>;
+                  return <button key={t} className={'chip' + (on ? ' on' : '')} onClick={() => mudarTempos(x, on ? x.tempos.filter(y => y !== t) : [...(x.tempos || []), t])}>{on ? '✓ ' : ''}{nomeTempo(t)}</button>;
                 })}
               </>}
           </div>
