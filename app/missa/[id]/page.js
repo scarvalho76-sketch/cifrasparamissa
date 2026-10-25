@@ -89,6 +89,13 @@ function Rolagem({ alvoId }) {
   const barra = useRef(null);
   const estado = useRef({ resto: 0, ultimo: 0, quadro: 0 });
   useEffect(() => { setVel(lerPref('missa:rolagem', 4)); }, []);
+  // Pedal (seta para a esquerda) liga/desliga a rolagem do momento aberto
+  const alternarRef = useRef(null);
+  useEffect(() => {
+    const h = () => alternarRef.current?.();
+    window.addEventListener('cantus:rolagem', h);
+    return () => window.removeEventListener('cantus:rolagem', h);
+  }, []);
   const mudarVel = d => setVel(v => { const n = Math.min(10, Math.max(1, v + d)); gravarPref('missa:rolagem', n); return n; });
 
   const chegou = () => {
@@ -118,6 +125,7 @@ function Rolagem({ alvoId }) {
     return () => { cancelAnimationFrame(e.quadro); document.removeEventListener('pointerdown', tocar); document.removeEventListener('visibilitychange', sumiu); };
   }, [rolando, vel, alvoId]);
 
+  alternarRef.current = () => alternar();
   function alternar() {
     if (rolando) return setRolando(false);
     if (chegou()) { // já no fim: volta ao começo do momento antes de rolar
@@ -197,6 +205,32 @@ export default function Cerimonia() {
   const [oeSel, setOeSel] = useState(null);       // Oração Eucarística escolhida na hora
   const [voltarOE, setVoltarOE] = useState(false); // veio da Oração para o Santo cantado
   useTelaAcesa();
+  // Pedal de virar página (M-Vave e similares, que funcionam como teclado):
+  //   ← liga/desliga a rolagem · → próxima seção · ↓/Page Down desce o texto · ↑/Page Up sobe o texto
+  const abertoRef = useRef(null);
+  abertoRef.current = aberto;
+  useEffect(() => {
+    const tecla = e => {
+      const alvo = e.target;
+      if (e.altKey || e.ctrlKey || e.metaKey || (alvo && (alvo.tagName === 'INPUT' || alvo.tagName === 'TEXTAREA' || alvo.tagName === 'SELECT' || alvo.isContentEditable))) return;
+      const passo = Math.round(window.innerHeight * 0.3);
+      if (e.key === 'ArrowLeft') {
+        e.preventDefault();
+        if (abertoRef.current !== null) window.dispatchEvent(new Event('cantus:rolagem'));
+      } else if (e.key === 'ArrowRight') {
+        e.preventDefault();
+        const prox = document.querySelector('.cer-ativo [id^="fim-"] .cer-prox');
+        if (prox) prox.click();
+        else if (abertoRef.current === null) document.querySelector('.cer-mom .cer-cab')?.click();
+      } else if (e.key === 'ArrowDown' || e.key === 'PageDown') {
+        e.preventDefault(); window.scrollBy({ top: passo, behavior: 'smooth' });
+      } else if (e.key === 'ArrowUp' || e.key === 'PageUp') {
+        e.preventDefault(); window.scrollBy({ top: -passo, behavior: 'smooth' });
+      }
+    };
+    window.addEventListener('keydown', tecla);
+    return () => window.removeEventListener('keydown', tecla);
+  }, []);
   useEffect(() => {
     setAjustes(lerPref(chaveLocal(escala) + ':ajustes', {}));
     setFonte(lerPref('missa:fonte', 1));
@@ -385,6 +419,7 @@ export default function Cerimonia() {
             ))}
           </span>
         </div>
+        <p className="mut" style={{ fontSize: '.8rem', margin: '8px 0 0' }}>Pedal ou teclado: ← rolagem · → próxima seção · ↑ ↓ mover o texto</p>
         {algumCapo && (
           <div className="row" style={{ marginTop: 10, justifyContent: 'flex-start' }}>
             <span className="mut" style={{ fontSize: '.9rem' }}>Capotraste</span>
