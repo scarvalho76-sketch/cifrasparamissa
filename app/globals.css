@@ -115,3 +115,17 @@ a.botao.sec{background:transparent;color:var(--ouro-escuro)}
 .leitura-tit{font-size:.8rem;text-transform:uppercase;letter-spacing:.06em;color:var(--ouro-escuro);font-weight:600}
 .leitura-res{display:block;font-style:italic;color:var(--ink);margin-top:2px}
 .leitura[open]{background:var(--card)}
+
+/* Oração Eucarística */
+.oe-chips{display:flex;flex-wrap:wrap;gap:6px;margin:4px 0 12px}
+.oe-chips button{min-height:34px;min-width:48px;padding:2px 12px}
+.oe-texto{line-height:1.6;background:var(--fundo);border:1px solid var(--line);border-radius:3px;padding:12px}
+.oe-texto p{margin:0 0 10px}
+.oe-texto p i{font-style:normal;font-size:.75rem;text-transform:uppercase;letter-spacing:.05em;margin-right:6px;color:var(--mut);font-weight:400}
+.oe-texto p.resp{font-weight:700}
+.oe-texto p.resp i{color:var(--ouro-escuro)}
+.oe-parte{font-size:.75rem;text-transform:uppercase;letter-spacing:.08em;color:var(--ouro-escuro);margin:14px 0 6px;border-top:1px dashed var(--line);padding-top:10px}
+.oe-texto .oe-parte:first-child{border:0;margin-top:0;padding-top:0}
+.oe-santo{border:2px solid var(--ouro);border-radius:6px;padding:10px 12px;margin:10px 0;background:var(--card)}
+.oe-santo p{margin:0 0 6px}
+.oe-santo p.resp{font-weight:700}

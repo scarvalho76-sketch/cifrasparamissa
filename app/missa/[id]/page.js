@@ -4,6 +4,7 @@ import { useParams } from 'next/navigation';
 import { supabase } from '@/lib/supabase';
 import { dataLonga, dataHoraCurta, dataIso, simples, fmtData } from '@/lib/util';
 import ConviteBotao from '@/components/ConviteBotao';
+import TextoOracao from '@/components/TextoOracao';
 import { transporCifra, distancia, nomeDoTom, lerTom, gerarGrade, letraDaCifra } from '@/lib/musica';
 
 // Modo celebração: só aquela missa, momento a momento (adaptado do Modo cerimônia do Sonata Casamentos).
@@ -188,12 +189,15 @@ export default function Cerimonia() {
   const [salmo, setSalmo] = useState(null);
   const [biblioteca, setBiblioteca] = useState(null); // para a música avulsa
   const [avulsa, setAvulsa] = useState(null);
+  const [oeSel, setOeSel] = useState(null);       // Oração Eucarística escolhida na hora
+  const [voltarOE, setVoltarOE] = useState(false); // veio da Oração para o Santo cantado
   useTelaAcesa();
   useEffect(() => {
     setAjustes(lerPref(chaveLocal(escala) + ':ajustes', {}));
     setFonte(lerPref('missa:fonte', 1));
     setFormato(lerPref('missa:formato', null));
     setUsaCapo(lerPref('missa:capo', null));
+    setOeSel(lerPref(chaveLocal(escala) + ':oe', null));
   }, [escala]);
   const ajustar = (id, delta) => {
     const novo = { ...ajustes, [id]: delta === null ? 0 : (ajustes[id] || 0) + delta };
@@ -334,6 +338,17 @@ export default function Cerimonia() {
     const k = ev >= 0 ? ev + 1 : itens.findIndex(i => i.numero && i.numero > 5);
     itens = k >= 0 ? [...itens.slice(0, k), v, ...itens.slice(k)] : [...itens, v];
   }
+  // Oração Eucarística: seção sem número entre o Ofertório (6) e o Santo (7)
+  const oracoes = (d.oracoes || []).filter(o => o.sigla !== 'SANTO');
+  const santoRezado = (d.oracoes || []).find(o => o.sigla === 'SANTO')?.texto || '';
+  if (oracoes.length) antesDoNumero(7, { id: 'oe', oe: true, momento: 'Oração Eucarística', numero: null });
+  const idxOE = itens.findIndex(x => x.oe);
+  const idxSanto = itens.findIndex(x => !x.oe && /^santo/i.test(x.momento || ''));
+  const escolherOE = s => { setOeSel(s); gravarPref(chaveLocal(escala) + ':oe', s); };
+  function voltarParaOracao() {
+    setVoltarOE(false); setAberto(idxOE);
+    setTimeout(() => (document.getElementById('oe-santo') || refs.current[idxOE])?.scrollIntoView({ behavior: 'smooth', block: 'start' }), 120);
+  }
   // Capotraste: quem toca violão vê as formas dos acordes com o capo; tecladista vê a cifra no tom real
   const soTeclado = /teclado|piano|órg[aã]o|orgao/i.test(instr || '') && !/viol/i.test(instr || '');
   const comCapo = usaCapo ?? !soTeclado;
@@ -375,6 +390,38 @@ export default function Cerimonia() {
       </div>
 
       {itens.map((i, n) => {
+        // Oração Eucarística (escolhida na hora), com o Santo rezado no lugar e o atalho para o Santo cantado
+        if (i.oe) {
+          const ativo = aberto === n;
+          const sel = oracoes.find(o => o.sigla === oeSel);
+          const prox = itens[n + 1] && n + 1 === idxSanto ? n + 2 : n + 1;
+          const temSantoCantado = idxSanto >= 0 && itens[idxSanto].nome;
+          return (
+            <div key={i.id} ref={el => { refs.current[n] = el; }} className={'card cer-mom' + (ativo ? ' cer-ativo' : '')}>
+              <button type="button" className="cer-cab" onClick={() => abrir(n)} aria-expanded={ativo}>
+                <span className="cer-num cer-sem">✦</span>
+                <span style={{ flex: 1, textAlign: 'left' }}>
+                  <span className="cer-momento">Oração Eucarística</span>
+                  <span className="cer-musica">{sel ? sel.nome : <span className="mut">Escolha a oração</span>}</span>
+                </span>
+                <span aria-hidden="true">{ativo ? '▾' : '▸'}</span>
+              </button>
+              {ativo && (
+                <div style={{ marginTop: 10 }}>
+                  <div className="oe-chips" role="group" aria-label="Escolher a Oração Eucarística">
+                    {oracoes.map(o => <button key={o.sigla} type="button" className={oeSel === o.sigla ? '' : 'sec'} onClick={() => escolherOE(o.sigla)}>{o.sigla}</button>)}
+                  </div>
+                  {sel ? <TextoOracao texto={sel.texto} santo={santoRezado} fonte={fonte} onSantoCantado={temSantoCantado ? () => { setVoltarOE(true); setAberto(idxSanto); setTimeout(() => refs.current[idxSanto]?.scrollIntoView({ behavior: 'smooth', block: 'start' }), 60); } : null} />
+                    : <p className="mut">Toque na oração que o padre começar.</p>}
+                  <div id={'fim-' + n}>
+                    {itens[prox] && <button className="cer-prox" onClick={() => abrir(prox)}>Próximo momento ▸ {itens[prox].momento}</button>}
+                  </div>
+                  <Rolagem key={i.id} alvoId={'fim-' + n} />
+                </div>
+              )}
+            </div>
+          );
+        }
         // Leituras intercaladas com os momentos (Primeira antes do Salmo, Segunda depois, Evangelho após a Aclamação)
         if (i.leitura) {
           const L = i.leitura;
@@ -444,6 +491,7 @@ export default function Cerimonia() {
             {ativo && (
               <div style={{ marginTop: 12 }}>
                 {i.avulsa && <BuscaAvulsa biblioteca={biblioteca} escolhida={escolhida} onEscolher={setAvulsa} />}
+                {voltarOE && n === idxSanto && idxOE >= 0 && <button type="button" className="sec cer-prox" style={{ marginTop: 0, marginBottom: 10 }} onClick={voltarParaOracao}>◂ Voltar à Oração Eucarística</button>}
                 {mostraCifra && base && (
                   <div className="row" style={{ marginBottom: 8 }}>
                     <span style={{ fontSize: '.9rem' }}>
@@ -472,7 +520,9 @@ export default function Cerimonia() {
                 )}
                 <div id={'fim-' + n}>
                   {n < itens.length - 1
-                    ? <button className="cer-prox" onClick={() => abrir(n + 1)}>Próximo momento ▸ {itens[n + 1].momento}</button>
+                    ? (voltarOE && n === idxSanto && idxOE >= 0
+                      ? <button className="cer-prox" onClick={voltarParaOracao}>◂ Voltar à Oração Eucarística</button>
+                      : <button className="cer-prox" onClick={() => abrir(n + 1)}>Próximo momento ▸ {itens[n + 1].momento}</button>)
                     : <p className="mut" style={{ textAlign: 'center', marginTop: 16 }}>Fim do roteiro 🎶</p>}
                 </div>
                 <Rolagem key={i.id} alvoId={'fim-' + n} />

@@ -8,9 +8,10 @@ import Biblioteca from './biblioteca';
 import Musicos from './musicos';
 import Momentos from './momentos';
 import Amigos from './amigos';
+import Oracoes from './oracoes';
 import { lerConta, apagarConta } from '@/lib/conta';
 
-const ABAS_ADMIN = [['missas', 'Missas'], ['biblioteca', 'Biblioteca'], ['musicos', 'Músicos'], ['momentos', 'Momentos'], ['amigos', 'Amigos']];
+const ABAS_ADMIN = [['missas', 'Missas'], ['biblioteca', 'Biblioteca'], ['musicos', 'Músicos'], ['momentos', 'Momentos'], ['oracoes', 'Orações'], ['amigos', 'Amigos']];
 // Por enquanto, amigos não cadastram músicos (aba só do administrador)
 const ABAS_CONTA = [['missas', 'Missas'], ['biblioteca', 'Biblioteca']];
 
@@ -73,6 +74,7 @@ export default function Painel() {
       {aba === 'musicos' && quem?.tipo === 'admin' && <Musicos />}
       {aba === 'momentos' && quem?.tipo === 'admin' && <Momentos />}
       {aba === 'amigos' && quem?.tipo === 'admin' && <Amigos />}
+      {aba === 'oracoes' && quem?.tipo === 'admin' && <Oracoes />}
     </div>
   );
 }
