@@ -490,7 +490,8 @@ export default function Cerimonia() {
             {i.obs && i.obs.length > 40 && <p className="cer-obs">{/^aclama/i.test(i.momento) ? <><strong>V.</strong> </> : null}{i.obs}</p>}
             {ativo && (
               <div style={{ marginTop: 12 }}>
-                {i.avulsa && <BuscaAvulsa biblioteca={biblioteca} escolhida={escolhida} onEscolher={setAvulsa} />}
+                {i.avulsa && <BuscaAvulsa biblioteca={biblioteca} escolhida={escolhida}
+                  onEscolher={id => { setAvulsa(id); setTimeout(() => refs.current[n]?.scrollIntoView({ behavior: 'smooth', block: 'start' }), 60); }} />}
                 {voltarOE && n === idxSanto && idxOE >= 0 && <button type="button" className="sec cer-prox" style={{ marginTop: 0, marginBottom: 10 }} onClick={voltarParaOracao}>◂ Voltar à Oração Eucarística</button>}
                 {mostraCifra && base && (
                   <div className="row" style={{ marginBottom: 8 }}>
