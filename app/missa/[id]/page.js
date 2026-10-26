@@ -5,7 +5,7 @@ import { supabase } from '@/lib/supabase';
 import { dataLonga, dataHoraCurta, dataIso, simples, fmtData } from '@/lib/util';
 import ConviteBotao from '@/components/ConviteBotao';
 import TextoOracao from '@/components/TextoOracao';
-import { transporCifra, distancia, nomeDoTom, lerTom, gerarGrade, letraDaCifra } from '@/lib/musica';
+import { transporCifra, distancia, nomeDoTom, lerTom, gerarGrade, letraDaCifra, ehLinhaDeAcordes } from '@/lib/musica';
 
 // Modo celebração: só aquela missa, momento a momento (adaptado do Modo cerimônia do Sonata Casamentos).
 // Quem só canta vê a letra; quem toca vê a cifra ou a grade. Cada um pode trocar.
@@ -173,9 +173,20 @@ function BuscaAvulsa({ biblioteca, escolhida, onEscolher }) {
   );
 }
 
-// Partes entre colchetes ([Refrão], [Intro], [Final]...) em negrito
-function destacarPartes(texto) {
-  return String(texto).split(/(\[[^\]\n]+\])/).map((t, k) => k % 2 ? <strong key={k} className="cer-parte">{t}</strong> : t);
+// Partes entre colchetes ([Refrão], [Intro]...) em negrito dourado; na cifra/grade, acordes em negrito
+// (a fonte continua de largura fixa, então o alinhamento não muda)
+function destacarPartes(texto, comAcordes = false) {
+  const linhas = String(texto).split('\n');
+  return linhas.map((linha, n) => (
+    <span key={n}>
+      {linha.split(/(\[[^\]\n]+\])/).map((t, k) => {
+        if (k % 2) return <strong key={k} className="cer-parte">{t}</strong>;
+        if (comAcordes && t.trim() && ehLinhaDeAcordes(t.trim())) return <strong key={k} className="cer-acorde">{t}</strong>;
+        return t;
+      })}
+      {n < linhas.length - 1 ? '\n' : null}
+    </span>
+  ));
 }
 
 function Selo({ children, forte }) {
@@ -553,7 +564,7 @@ export default function Cerimonia() {
                 {aviso && <p className="err" style={{ fontSize: '.9rem' }}>{aviso}</p>}
                 {gradeAuto && <p className="mut" style={{ fontSize: '.9rem' }}>Grade montada automaticamente a partir da cifra, com um acorde por compasso: pode não corresponder aos compassos reais.</p>}
                 {querGrade && !i.grade && !gradeAuto && i.cifra && <p className="mut" style={{ fontSize: '.9rem' }}>Não foi possível montar a grade desta cifra; mostrando a cifra.</p>}
-                {texto ? <pre className={mostraCifra ? 'cer-cifra' : 'cer-letra'} style={{ fontSize: `${(mostraCifra ? 1 : 1.15) * fonte}rem` }}>{destacarPartes(texto)}</pre> : !(salmo && ehSalmo(i)) && falta && <p className="mut">{falta}</p>}
+                {texto ? <pre className={mostraCifra ? 'cer-cifra' : 'cer-letra'} style={{ fontSize: `${(mostraCifra ? 1 : 1.15) * fonte}rem` }}>{destacarPartes(texto, mostraCifra)}</pre> : !(salmo && ehSalmo(i)) && falta && <p className="mut">{falta}</p>}
                 {salmo && ehSalmo(i) && (
                   <div style={{ marginTop: texto ? 14 : 0 }}>
                     <p style={{ margin: '0 0 8px', fontWeight: 600 }}>Salmo do dia <span className="mut">{salmo.referencia}</span></p>

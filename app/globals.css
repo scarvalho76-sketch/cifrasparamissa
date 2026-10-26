@@ -83,6 +83,7 @@ details.card summary{cursor:pointer}
 .cer .cer-leitura.cer-ativo{background:var(--card)}
 .cer .cer-rolagem{position:sticky;bottom:8px;z-index:4;display:flex;align-items:center;gap:6px;margin-top:12px;padding:8px 10px;background:var(--card);border:1px solid var(--line);border-radius:6px;box-shadow:0 4px 16px rgba(0,0,0,.12)}
 .cer .cer-achada{display:block;width:100%;text-align:left;margin:0 0 6px;letter-spacing:0;font-weight:400}
+.cer .cer-acorde{font-weight:700;color:var(--ink)}
 .cer .cer-parte{font-weight:700;color:var(--ouro-escuro)}
 .cer .cer-sem{border-style:dashed;font-size:.75rem}
 .cer .cer-momento{display:block;font-size:.8rem;text-transform:uppercase;letter-spacing:.06em;color:var(--mut)}
