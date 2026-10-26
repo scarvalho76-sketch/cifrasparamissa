@@ -5,13 +5,12 @@ import { supabase } from '@/lib/supabase';
 import { lerPref, gravarPref } from '@/lib/util';
 import Missas from './missas';
 import Biblioteca from './biblioteca';
-import Amigos from './amigos';
 import Configuracoes from './configuracoes';
 import Calendario from './calendario';
 import { lerConta, apagarConta } from '@/lib/conta';
 
-// Músicos, Momentos e Orações ficam dentro de Configurações
-const ABAS_ADMIN = [['missas', 'Missas'], ['calendario', 'Calendário'], ['biblioteca', 'Biblioteca'], ['config', 'Configurações'], ['amigos', 'Amigos']];
+// Músicos, Momentos, Orações e Amigos ficam dentro de Configurações (só o administrador vê)
+const ABAS_ADMIN = [['missas', 'Missas'], ['calendario', 'Calendário'], ['biblioteca', 'Biblioteca'], ['config', 'Configurações']];
 // Por enquanto, amigos não cadastram músicos (aba só do administrador)
 const ABAS_CONTA = [['missas', 'Missas'], ['calendario', 'Calendário'], ['biblioteca', 'Biblioteca']];
 
@@ -41,7 +40,7 @@ export default function Painel() {
       setQuem(q);
       const abas = q.tipo === 'admin' ? ABAS_ADMIN : ABAS_CONTA;
       let salva = lerPref('painel:aba', 'missas');
-      if (['musicos', 'momentos', 'oracoes'].includes(salva)) { gravarPref('painel:config', salva); salva = 'config'; gravarPref('painel:aba', 'config'); }
+      if (['musicos', 'momentos', 'oracoes', 'amigos'].includes(salva)) { gravarPref('painel:config', salva); salva = 'config'; gravarPref('painel:aba', 'config'); }
       setAba(abas.some(([k]) => k === salva) ? salva : 'missas'); setOk(true);
     })();
   }, [r]);
@@ -75,7 +74,6 @@ export default function Painel() {
       {aba === 'calendario' && <Calendario onAbrir={id => { setAlvo({ missa: id, t: Date.now() }); trocar('missas'); }} onNova={data => { setAlvo({ nova: data, t: Date.now() }); trocar('missas'); }} />}
       {aba === 'biblioteca' && <Biblioteca />}
       {aba === 'config' && quem?.tipo === 'admin' && <Configuracoes />}
-      {aba === 'amigos' && quem?.tipo === 'admin' && <Amigos />}
     </div>
   );
 }

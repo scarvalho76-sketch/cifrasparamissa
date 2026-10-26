@@ -4,9 +4,10 @@ import { lerPref, gravarPref } from '@/lib/util';
 import Musicos from './musicos';
 import Momentos from './momentos';
 import Oracoes from './oracoes';
+import Amigos from './amigos';
 
-// Configurações (administrador): Músicos, Momentos e Orações num só lugar
-const SECOES = [['musicos', '🎸 Músicos'], ['momentos', '🔢 Momentos'], ['oracoes', '✝ Orações']];
+// Configurações (só o administrador): Músicos, Momentos, Orações e Amigos num só lugar
+const SECOES = [['musicos', '🎸 Músicos'], ['momentos', '🔢 Momentos'], ['oracoes', '✝ Orações'], ['amigos', '👥 Amigos']];
 
 export default function Configuracoes() {
   const [secao, setSecao] = useState('musicos');
@@ -22,6 +23,7 @@ export default function Configuracoes() {
       {secao === 'musicos' && <Musicos />}
       {secao === 'momentos' && <Momentos />}
       {secao === 'oracoes' && <Oracoes />}
+      {secao === 'amigos' && <Amigos />}
     </>
   );
 }
