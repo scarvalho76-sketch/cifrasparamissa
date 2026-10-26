@@ -433,7 +433,9 @@ export default function Cerimonia() {
         // Oração Eucarística (escolhida na hora), com o Santo rezado no lugar e o atalho para o Santo cantado
         if (i.oe) {
           const ativo = aberto === n;
-          const sel = oracoes.find(o => o.sigla === oeSel);
+          // a II vem pré-selecionada (a mais usada); a escolha feita no aparelho tem prioridade
+          const efetiva = oracoes.some(o => o.sigla === oeSel) ? oeSel : (oracoes.some(o => o.sigla === 'II') ? 'II' : null);
+          const sel = oracoes.find(o => o.sigla === efetiva);
           const prox = itens[n + 1] && n + 1 === idxSanto ? n + 2 : n + 1;
           const temSantoCantado = idxSanto >= 0 && itens[idxSanto].nome;
           return (
@@ -449,7 +451,7 @@ export default function Cerimonia() {
               {ativo && (
                 <div style={{ marginTop: 10 }}>
                   <div className="oe-chips" role="group" aria-label="Escolher a Oração Eucarística">
-                    {oracoes.map(o => <button key={o.sigla} type="button" className={oeSel === o.sigla ? '' : 'sec'} onClick={() => escolherOE(o.sigla)}>{o.sigla}</button>)}
+                    {oracoes.map(o => <button key={o.sigla} type="button" className={efetiva === o.sigla ? '' : 'sec'} onClick={() => escolherOE(o.sigla)}>{o.sigla}</button>)}
                   </div>
                   {sel ? <TextoOracao texto={sel.texto} santo={santoRezado} fonte={fonte} onSantoCantado={temSantoCantado ? () => { setVoltarOE(true); setAberto(idxSanto); setTimeout(() => refs.current[idxSanto]?.scrollIntoView({ behavior: 'smooth', block: 'start' }), 60); } : null} />
                     : <p className="mut">Toque na oração que o padre começar.</p>}
