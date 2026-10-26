@@ -173,3 +173,13 @@ a.botao.sec{background:transparent;color:var(--ouro-escuro)}
   .cal-dia:hover .cal-mais,.cal-mais:focus{opacity:1}
   .cal-mais:hover{background:var(--fundo);color:var(--ouro-escuro)}
 }
+
+/* Configurações: seções */
+.config-secoes{display:flex;flex-wrap:wrap;gap:6px;margin:-4px 0 16px}
+.config-secoes .chip{min-height:34px;padding:4px 14px;font-size:.92rem;cursor:pointer}
+
+/* Menu do painel em telas estreitas: quebra em linhas, sem rolagem lateral */
+@media (max-width:600px){
+  .tabs{flex-wrap:wrap;overflow-x:visible}
+  .tabs button{min-height:36px;padding:6px 12px;font-size:.92rem}
+}
