@@ -17,9 +17,9 @@ async function renumerar(itens) {
   await Promise.all(itens.map((it, i) => it.ordem === (i + 1) * 10 ? null : supabase.from('missa_itens').update({ ordem: (i + 1) * 10 }).eq('id', it.id)));
 }
 
-function NovaMissa({ anteriores, onCriada, onCancelar }) {
+function NovaMissa({ anteriores, onCriada, onCancelar, dataInicial }) {
   const ultimo = anteriores[0];
-  const [f, setF] = useState({ data: '', hora: '', titulo: '', local: ultimo?.local || '', tempo: 'Tempo Comum', obs: '', base: '' });
+  const [f, setF] = useState({ data: dataInicial || '', hora: '', titulo: '', local: ultimo?.local || '', tempo: 'Tempo Comum', obs: '', base: '' });
   const [msg, setMsg] = useState('');
   const [lit, setLit] = useState(null); // liturgia do dia (CNBB)
   const [buscando, setBuscando] = useState(false);
@@ -313,7 +313,7 @@ function Detalhe({ id, musicos, musicas, porMomento, indicadas, momentos, onFech
   );
 }
 
-export default function Missas() {
+export default function Missas({ alvo }) {
   const [lista, setLista] = useState(null);
   const [resumo, setResumo] = useState({});
   const [musicos, setMusicos] = useState([]);
@@ -323,6 +323,13 @@ export default function Missas() {
   const [ligacoes, setLigacoes] = useState([]);
   const [nova, setNova] = useState(false);
   const [aberta, setAberta] = useState(null);
+  const [dataNova, setDataNova] = useState('');
+  // vindo do Calendário: abrir uma missa ou criar uma no dia escolhido
+  useEffect(() => {
+    if (!alvo) return;
+    if (alvo.missa) { setNova(false); setAberta(alvo.missa); }
+    if (alvo.nova) { setAberta(null); setDataNova(alvo.nova); setNova(true); }
+  }, [alvo]);
   const [verAnteriores, setVerAnteriores] = useState(false);
 
   const carregar = async () => {
@@ -386,7 +393,7 @@ export default function Missas() {
         <h2 style={{ margin: 0 }}>Próximas missas</h2>
         {!nova && <button onClick={() => setNova(true)}>+ Nova missa</button>}
       </div>
-      {nova && <NovaMissa anteriores={[...lista].reverse()} onCancelar={() => setNova(false)} onCriada={id => { setNova(false); carregar(); setAberta(id); }} />}
+      {nova && <NovaMissa key={dataNova} dataInicial={dataNova} anteriores={[...lista].reverse()} onCancelar={() => { setNova(false); setDataNova(''); }} onCriada={id => { setNova(false); carregar(); setAberta(id); }} />}
       {proximas.length === 0 && !nova && <div className="card mut">Nenhuma missa marcada. Toque em “+ Nova missa”.</div>}
       {proximas.map(cartao)}
       {anteriores.length > 0 && (

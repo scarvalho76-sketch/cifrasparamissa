@@ -130,3 +130,46 @@ a.botao.sec{background:transparent;color:var(--ouro-escuro)}
 .oe-santo{border:2px solid var(--ouro);border-radius:6px;padding:10px 12px;margin:10px 0;background:var(--card)}
 .oe-santo p{margin:0 0 6px}
 .oe-santo p.resp{font-weight:700}
+
+/* Calendário das missas */
+.cal-legenda{display:flex;flex-wrap:wrap;gap:6px 16px;list-style:none;padding:0;margin:0 0 12px;font-size:.85rem;color:var(--mut)}
+.cal-legenda li{display:flex;align-items:center;gap:6px}
+.cal-ponto{display:inline-block;width:10px;height:10px;border-radius:50%}
+.cal-grade{display:none}
+.cal-missa{display:block;width:100%;text-align:left;min-height:0;padding:5px 7px;margin:0 0 4px;border-radius:4px;border:0;border-left:4px solid;font-size:.78rem;line-height:1.25;letter-spacing:0;font-weight:400;cursor:pointer;color:var(--ink)}
+.cal-missa:hover{filter:brightness(.96)}
+.cal-hora{font-weight:700}
+.cal-tit{font-weight:600}
+.cal-local,.cal-status{display:block;color:var(--mut);font-size:.72rem;overflow:hidden;text-overflow:ellipsis;white-space:nowrap}
+.cal-status{color:var(--ok)}
+.cal-status.falta{color:var(--bad)}
+.cal-verde{background:rgba(93,125,62,.14);border-color:var(--verde)} .cal-ponto.cal-verde{background:var(--verde)}
+.cal-roxo{background:rgba(111,76,140,.14);border-color:var(--roxo)} .cal-ponto.cal-roxo{background:var(--roxo)}
+.cal-branco{background:rgba(176,138,62,.14);border-color:var(--ouro)} .cal-ponto.cal-branco{background:#fff;border:2px solid var(--ouro)}
+.cal-vermelho{background:rgba(184,64,44,.14);border-color:var(--vermelho)} .cal-ponto.cal-vermelho{background:var(--vermelho)}
+.cal-lista{list-style:none;margin:0;padding:0;border:1px solid var(--line);border-radius:6px;overflow:hidden}
+.cal-lista li{display:flex;gap:10px;padding:8px 10px;border-top:1px solid var(--line);background:var(--fundo)}
+.cal-lista li:first-child{border-top:0}
+.cal-lista li.cal-li-cheio{background:var(--card)}
+.cal-li-data{width:40px;flex:none;text-align:center;color:var(--mut);line-height:1.1}
+.cal-li-data strong{display:block;font:600 1.25rem "Cormorant Garamond",Georgia,serif;color:var(--ink)}
+.cal-li-data span{font-size:.72rem}
+.cal-li-hoje .cal-li-data,.cal-li-hoje .cal-li-data strong{color:var(--ouro-escuro)}
+.cal-li-conteudo{flex:1;min-width:0}
+.cal-li-mais{background:none;border:0;color:var(--mut);min-height:0;padding:2px 0;font-size:.8rem;font-weight:400;letter-spacing:0}
+.cal-li-mais:hover{background:none;color:var(--ouro-escuro);text-decoration:underline}
+@media (min-width:760px){
+  .wrap:has(.cal-grade){max-width:1100px}
+  .cal-lista{display:none}
+  .cal-grade{display:grid;grid-template-columns:repeat(7,1fr);gap:1px;background:var(--line);border:1px solid var(--line);border-radius:6px;overflow:hidden}
+  .cal-cab{background:var(--topo);text-align:center;font-size:.78rem;font-weight:600;color:var(--mut);padding:6px 0}
+  .cal-vazio{background:var(--fundo)}
+  .cal-dia{background:var(--card);min-height:112px;padding:5px}
+  .cal-domingo{background:var(--topo)}
+  .cal-num-linha{display:flex;justify-content:space-between;align-items:center;margin-bottom:3px}
+  .cal-num{display:inline-grid;place-items:center;min-width:26px;height:26px;border-radius:50%;font-size:.85rem;font-weight:700;color:var(--mut)}
+  .cal-num.cal-hoje{background:var(--ouro);color:#fffaf0}
+  .cal-mais{min-height:0;padding:0 7px;line-height:22px;border:0;background:none;color:var(--mut);font-size:1.1rem;opacity:0}
+  .cal-dia:hover .cal-mais,.cal-mais:focus{opacity:1}
+  .cal-mais:hover{background:var(--fundo);color:var(--ouro-escuro)}
+}

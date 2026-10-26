@@ -9,18 +9,20 @@ import Musicos from './musicos';
 import Momentos from './momentos';
 import Amigos from './amigos';
 import Oracoes from './oracoes';
+import Calendario from './calendario';
 import { lerConta, apagarConta } from '@/lib/conta';
 
-const ABAS_ADMIN = [['missas', 'Missas'], ['biblioteca', 'Biblioteca'], ['musicos', 'Músicos'], ['momentos', 'Momentos'], ['oracoes', 'Orações'], ['amigos', 'Amigos']];
+const ABAS_ADMIN = [['missas', 'Missas'], ['calendario', 'Calendário'], ['biblioteca', 'Biblioteca'], ['musicos', 'Músicos'], ['momentos', 'Momentos'], ['oracoes', 'Orações'], ['amigos', 'Amigos']];
 // Por enquanto, amigos não cadastram músicos (aba só do administrador)
-const ABAS_CONTA = [['missas', 'Missas'], ['biblioteca', 'Biblioteca']];
+const ABAS_CONTA = [['missas', 'Missas'], ['calendario', 'Calendário'], ['biblioteca', 'Biblioteca']];
 
 export default function Painel() {
   const r = useRouter();
   const [ok, setOk] = useState(false);
   const [aba, setAba] = useState('missas');
   const [semSessao, setSemSessao] = useState(false);
-  const [quem, setQuem] = useState(null); // { tipo: 'admin' } ou { tipo: 'conta', nome }
+  const [quem, setQuem] = useState(null);
+  const [alvo, setAlvo] = useState(null); // do Calendário para Missas: { missa: id } ou { nova: 'dd/mm/aaaa' } // { tipo: 'admin' } ou { tipo: 'conta', nome }
 
   // Se a sessão cair (por exemplo, "Sair" em outro aparelho), avisa sem perder o que está na tela.
   // Ao entrar de novo em outra aba, esta aba recebe a sessão nova sozinha.
@@ -69,7 +71,8 @@ export default function Painel() {
         {(quem?.tipo === 'admin' ? ABAS_ADMIN : ABAS_CONTA).map(([k, t]) => <button key={k} className={aba === k ? 'on' : ''} onClick={() => trocar(k)}>{t}</button>)}
         <button style={{ marginLeft: 'auto' }} onClick={sair}>Sair</button>
       </div>
-      {aba === 'missas' && <Missas />}
+      {aba === 'missas' && <Missas alvo={alvo} />}
+      {aba === 'calendario' && <Calendario onAbrir={id => { setAlvo({ missa: id, t: Date.now() }); trocar('missas'); }} onNova={data => { setAlvo({ nova: data, t: Date.now() }); trocar('missas'); }} />}
       {aba === 'biblioteca' && <Biblioteca />}
       {aba === 'musicos' && quem?.tipo === 'admin' && <Musicos />}
       {aba === 'momentos' && quem?.tipo === 'admin' && <Momentos />}
