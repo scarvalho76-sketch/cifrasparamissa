@@ -5,6 +5,7 @@ import { dataLonga, fmtData, fmtHora, juntarDataHora, TIPOS_EVENTO } from '@/lib
 import { carregarBiblioteca } from '@/lib/biblioteca';
 import CampoDataHora from './campoData';
 import BuscaMusicas from '@/components/BuscaMusicas';
+import ConviteBotao from '@/components/ConviteBotao';
 
 // Eventos (Adoração, Luau, Terço...): cadastro e playlist de músicas da Biblioteca
 
@@ -99,7 +100,10 @@ function Detalhe({ id, biblio, onFechar, onMudou }) {
         <h1 style={{ marginTop: 2 }}>{ev.nome || ev.tipo || 'Evento'}</h1>
         <div className="mut">{[ev.tipo, ev.local].filter(Boolean).join(' · ')}</div>
         {ev.obs && <p style={{ margin: '6px 0 0' }}>{ev.obs}</p>}
-        <button className="sec mini" style={{ marginTop: 8 }} onClick={() => setEditando(true)}>Editar dados</button>
+        <div className="row" style={{ justifyContent: 'flex-start', gap: 6, marginTop: 8 }}>
+          <button className="sec mini" onClick={() => setEditando(true)}>Editar dados</button>
+          <ConviteBotao evento missaId={id} dataHora={ev.data_hora} titulo={ev.nome || ev.tipo} />
+        </div>
       </div>
 
       <h2 style={{ marginTop: 20 }}>Músicas <span className="mut" style={{ fontFamily: 'inherit', fontSize: '.9rem', fontWeight: 400 }}>· {lista.length}</span></h2>

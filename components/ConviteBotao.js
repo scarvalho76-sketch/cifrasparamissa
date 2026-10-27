@@ -5,7 +5,8 @@ import { dataLonga, fmtData, dataIso } from '@/lib/util';
 
 // Link para convidados (instrumentistas ou cantores presentes): abre o Modo celebração desta missa,
 // só para ver; já pode ser usado e vale até o dia da celebração.
-export default function ConviteBotao({ missaId, dataHora, titulo }) {
+// Serve para missas e para eventos (evento = true): muda a função do banco, o endereço e os textos
+export default function ConviteBotao({ missaId, dataHora, titulo, evento = false }) {
   const [link, setLink] = useState('');
   const [msg, setMsg] = useState('');
   const [aberto, setAberto] = useState(false);
@@ -13,12 +14,12 @@ export default function ConviteBotao({ missaId, dataHora, titulo }) {
   async function gerar(novo = false) {
     setMsg('');
     if (novo && !confirm('Gerar outro link? O link anterior deixa de funcionar.')) return;
-    const { data, error } = await supabase.rpc('missa_gerar_convite', { p_id: missaId, p_novo: novo });
+    const { data, error } = await supabase.rpc(evento ? 'evento_gerar_convite' : 'missa_gerar_convite', { p_id: missaId, p_novo: novo });
     if (error) return setMsg('Não foi possível gerar o link: ' + error.message);
-    setLink(`${location.origin}/missa/${missaId}?c=${data.convite}`); setAberto(true);
+    setLink(`${location.origin}/${evento ? 'evento' : 'missa'}/${missaId}?c=${data.convite}`); setAberto(true);
     if (novo) setMsg('Novo link gerado. O anterior não funciona mais.');
   }
-  const texto = () => `Músicas da missa${titulo ? ' (' + titulo + ')' : ''} de ${dataLonga(dataHora)}.\nAcompanhe letras e cifras por este link (vale até o dia da celebração):\n${link}`;
+  const texto = () => `Músicas ${evento ? 'do evento' : 'da missa'}${titulo ? ' (' + titulo + ')' : ''} de ${dataLonga(dataHora)}.\nAcompanhe letras e cifras por este link (vale até o dia ${evento ? 'do evento' : 'da celebração'}):\n${link}`;
   async function copiar() {
     try { await navigator.clipboard.writeText(link); setMsg('✓ Link copiado'); } catch { prompt('Copie o link:', link); }
   }
@@ -33,7 +34,7 @@ export default function ConviteBotao({ missaId, dataHora, titulo }) {
     <div className="card" style={{ margin: '10px 0 0', borderLeft: '4px solid var(--ouro)' }}>
       <strong>Link para convidados</strong>
       <p className="mut" style={{ margin: '4px 0 8px', fontSize: '.9rem' }}>
-        Quem abrir vê esta missa no Modo celebração (letra ou cifra), sem cadastro e sem poder alterar nada.
+        {evento ? 'Quem abrir vê este evento no Modo evento (letra ou cifra), sem cadastro e sem poder alterar nada.' : 'Quem abrir vê esta missa no Modo celebração (letra ou cifra), sem cadastro e sem poder alterar nada.'}
         {' '}Já pode ser usado e vale até o dia <strong>{fmtData(dataHora)}</strong>{ehHoje ? ' (hoje)' : ''}.
       </p>
       <input readOnly value={link} onFocus={e => e.target.select()} style={{ fontSize: '.85rem', marginBottom: 8 }} />

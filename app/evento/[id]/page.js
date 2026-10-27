@@ -8,6 +8,7 @@ import { carregarBiblioteca } from '@/lib/biblioteca';
 import Rolagem from '@/components/Rolagem';
 import BuscaMusicas from '@/components/BuscaMusicas';
 import { destacarPartes } from '@/components/Destaque';
+import ConviteBotao from '@/components/ConviteBotao';
 
 // Modo evento: a playlist do evento, música a música, com "Já toquei", troca de ordem
 // e músicas novas no fim. Fica guardado no aparelho para abrir sem internet.
@@ -44,8 +45,15 @@ export default function ModoEvento() {
   const [baixando, setBaixando] = useState(false);
   const refs = useRef({});
   const abertoRef = useRef(null); abertoRef.current = aberto;
+  const [convite, setConvite] = useState(null); // convidado: só leitura
 
-  async function carregar() {
+  async function carregar(cv = convite) {
+    if (cv) { // convidado: dados pela função do banco, só leitura
+      const { data, error } = await supabase.rpc('evento_dados', { p_id: id, p_convite: cv });
+      if (error) throw error;
+      const novo = { ...data, convidado: true, salvo_em: new Date().toISOString() };
+      setD(novo); gravar(chave(id), novo); return novo;
+    }
     const [a, b] = await Promise.all([
       supabase.from('missa_eventos').select('*').eq('id', id).single(),
       supabase.from('missa_evento_musicas').select(`id, ordem, tocada, tom, capo, musica_id, missa_musicas(${CAMPOS})`).eq('evento_id', id).order('ordem')
@@ -58,13 +66,23 @@ export default function ModoEvento() {
   useEffect(() => {
     setFonte(lerPref('missa:fonte', 1)); setFormato(lerPref('missa:formato', 'cifra') || 'cifra');
     setUsaCapo(lerPref('missa:capo', true) ?? true); setAjustes(lerPref(chave(id) + ':ajustes', {}));
-    const local = ler(chave(id)); if (local) setD(local);
+    let cv = new URLSearchParams(location.search).get('c');
+    try { if (cv) localStorage.setItem('evento:convite:' + id, cv); else cv = localStorage.getItem('evento:convite:' + id); } catch {}
+    setConvite(cv);
+    let local = ler(chave(id));
+    // convidado depois do dia do evento: apaga a cópia guardada
+    const dia = s => new Intl.DateTimeFormat('en-CA', { timeZone: 'America/Sao_Paulo', year: 'numeric', month: '2-digit', day: '2-digit' }).format(new Date(s));
+    if (cv && local?.convidado && dia(Date.now()) > dia(local.evento.data_hora)) {
+      try { [chave(id), chave(id) + ':pagina', chave(id) + ':ajustes', 'evento:convite:' + id].forEach(k => localStorage.removeItem(k)); } catch {}
+      local = null; setErro('Este link de convidado venceu: ele valia até o dia do evento. A cópia guardada neste aparelho foi apagada.'); setD(null); return;
+    }
+    if (local) setD(local);
     const b = ler('evento:biblioteca'); if (b) setBiblio(b);
     setOnline(navigator.onLine);
     const on = () => setOnline(true), off = () => setOnline(false);
     window.addEventListener('online', on); window.addEventListener('offline', off);
-    carregar().catch(e => { if (!local) setErro(navigator.onLine ? 'Não foi possível abrir este evento (entre no painel com o seu acesso).' : 'Sem internet e este evento ainda não foi guardado neste aparelho.'); });
-    carregarBiblioteca().then(x => { setBiblio(x); gravar('evento:biblioteca', x); }).catch(() => {});
+    carregar(cv).catch(e => { if (!local) setErro(navigator.onLine ? (cv ? (e.message || 'Link inválido.') : 'Não foi possível abrir este evento (entre no painel com o seu acesso).') : 'Sem internet e este evento ainda não foi guardado neste aparelho.'); });
+    if (!cv) carregarBiblioteca().then(x => { setBiblio(x); gravar('evento:biblioteca', x); }).catch(() => {});
     return () => { window.removeEventListener('online', on); window.removeEventListener('offline', off); };
   }, [id]);
 
@@ -140,6 +158,7 @@ export default function ModoEvento() {
   const mostraCifra = formato !== 'letra';
   const algumCapo = mostraCifra && itens.some(i => (i.capo ?? i.m?.capo) > 0);
   const tocadas = itens.filter(i => i.tocada).length;
+  const dono = !d.convidado;
 
   return (
     <div className="wrap cer">
@@ -148,6 +167,8 @@ export default function ModoEvento() {
         <h1 style={{ marginTop: 4 }}>{ev.nome || ev.tipo || 'Evento'}</h1>
         <div className="mut">{[ev.tipo, ev.local].filter(Boolean).join(' · ')} · {itens.length} {itens.length === 1 ? 'música' : 'músicas'}{tocadas ? ` · ${tocadas} já tocada${tocadas > 1 ? 's' : ''}` : ''}</div>
         {ev.obs && <p style={{ margin: '6px 0 0' }}>{ev.obs}</p>}
+        {d.convidado && <p className="mut" style={{ margin: '6px 0 0', fontSize: '.9rem' }}>Acesso de convidado (só para ver)</p>}
+        {dono && <div style={{ marginTop: 8 }}><ConviteBotao evento missaId={ev.id} dataHora={ev.data_hora} titulo={ev.nome || ev.tipo} /></div>}
         <div className="row" style={{ marginTop: 10 }}>
           <span className="mut" style={{ fontSize: '.9rem' }}>{!online ? 'Você está sem internet' : ler(chave(id) + ':pagina') ? '✓ Disponível sem internet' : 'Ainda não guardado para uso sem internet'}</span>
           {online && <button className="sec" onClick={baixar} disabled={baixando}>{baixando ? 'Guardando…' : 'Baixar para usar sem internet'}</button>}
@@ -203,11 +224,11 @@ export default function ModoEvento() {
                 {tom && <span className="chip on" style={{ cursor: 'default' }}>Tom: {tom}</span>}
                 {mostraCifra && capoMusica > 0 && <span className="chip on" style={{ cursor: 'default' }}>Capotraste na {capoMusica}ª casa</span>}
               </span>
-              <span className="row" style={{ gap: 6 }}>
+              {dono && <span className="row" style={{ gap: 6 }}>
                 <label className="ev-check"><input type="checkbox" checked={!!it.tocada} onChange={e => marcarTocada(it, e.target.checked)} /> Já toquei</label>
                 <button type="button" className="sec cer-mini" onClick={() => mover(n, -1)} disabled={n === 0} aria-label="Subir">▲</button>
                 <button type="button" className="sec cer-mini" onClick={() => mover(n, 1)} disabled={n === itens.length - 1} aria-label="Descer">▼</button>
-              </span>
+              </span>}
             </div>
             {ativo && (
               <div style={{ marginTop: 12 }}>
@@ -230,6 +251,7 @@ export default function ModoEvento() {
                 <div id={'fim-' + n}>
                   {n < itens.length - 1
                     ? <button className="cer-prox" onClick={() => abrir(n + 1)}>Próxima música ▸ {itens[n + 1].m?.nome || ''}</button>
+                    : !dono ? <p className="mut" style={{ textAlign: 'center', marginTop: 16 }}>Fim da lista 🎶</p>
                     : <button className="cer-prox sec" onClick={() => { setAdicionando(true); setAberto(null); setTimeout(() => document.getElementById('ev-adicionar')?.scrollIntoView({ behavior: 'smooth' }), 60); }}>Fim da lista · + Adicionar música</button>}
                 </div>
                 <Rolagem key={it.id} alvoId={'fim-' + n} />
@@ -239,7 +261,7 @@ export default function ModoEvento() {
         );
       })}
 
-      <div id="ev-adicionar" className="card" style={{ borderTopColor: 'var(--azul)' }}>
+      {dono && <div id="ev-adicionar" className="card" style={{ borderTopColor: 'var(--azul)' }}>
         {!adicionando
           ? <button type="button" className="cer-prox sec" style={{ marginTop: 0 }} onClick={() => setAdicionando(true)}>+ Adicionar música no fim da lista</button>
           : <>
@@ -248,8 +270,8 @@ export default function ModoEvento() {
               : <BuscaMusicas musicas={biblio.musicas} momentos={biblio.momentos} onEscolher={adicionar} jaTem={new Set(itens.map(x => x.musica_id))} autoFocus />}
             {!online && <p className="mut" style={{ marginTop: 8 }}>Sem internet: dá para buscar, mas a música só entra na lista com conexão.</p>}
           </>}
-      </div>
-      <button type="button" className="sec cer-prox" style={{ marginTop: 8 }} onClick={sair}>◂ Sair do modo evento</button>
+      </div>}
+      {dono && <button type="button" className="sec cer-prox" style={{ marginTop: 8 }} onClick={sair}>◂ Sair do modo evento</button>}
     </div>
   );
 }
