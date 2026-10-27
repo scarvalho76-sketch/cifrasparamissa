@@ -7,6 +7,7 @@ import ConviteBotao from '@/components/ConviteBotao';
 import TextoOracao from '@/components/TextoOracao';
 import Rolagem from '@/components/Rolagem';
 import CifraPre from '@/components/CifraPre';
+import CalibrarVoz from '@/components/CalibrarVoz';
 import { transporCifra, distancia, nomeDoTom, lerTom, gerarGrade, letraDaCifra, ehLinhaDeAcordes } from '@/lib/musica';
 
 // Modo celebração: só aquela missa, momento a momento (adaptado do Modo cerimônia do Sonata Casamentos).
@@ -374,6 +375,7 @@ export default function Cerimonia() {
             Quebrar linhas longas (para caber na tela)
           </label>
         )}
+        <CalibrarVoz />
         <p className="mut" style={{ fontSize: '.8rem', margin: '8px 0 0' }}>Pedal ou teclado: ← rolagem · → próxima seção · ↑ ↓ mover o texto</p>
         {algumCapo && (
           <div className="row" style={{ marginTop: 10, justifyContent: 'flex-start' }}>

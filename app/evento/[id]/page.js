@@ -10,6 +10,7 @@ import BuscaMusicas from '@/components/BuscaMusicas';
 import { destacarPartes } from '@/components/Destaque';
 import ConviteBotao from '@/components/ConviteBotao';
 import CifraPre from '@/components/CifraPre';
+import CalibrarVoz from '@/components/CalibrarVoz';
 
 // Modo evento: a playlist do evento, música a música, com "Já toquei", troca de ordem
 // e músicas novas no fim. Fica guardado no aparelho para abrir sem internet.
@@ -196,6 +197,7 @@ export default function ModoEvento() {
             Quebrar linhas longas (para caber na tela)
           </label>
         )}
+        <CalibrarVoz />
         <p className="mut" style={{ fontSize: '.8rem', margin: '8px 0 0' }}>Pedal ou teclado: ← rolagem · → próxima música · ↑ ↓ mover o texto</p>
         {msg && <p className={msg.startsWith('Pronto') ? 'okmsg' : 'err'} style={{ margin: '8px 0 0' }}>{msg}</p>}
       </div>

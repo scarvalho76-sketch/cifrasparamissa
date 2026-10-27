@@ -81,7 +81,7 @@ details.card summary{cursor:pointer}
 .cer .cer-obs{margin:8px 0 0;padding:8px 12px;border-left:3px solid var(--ouro);background:var(--fundo);font-style:italic;line-height:1.5}
 .cer .cer-leitura{border-top-color:var(--line);background:var(--fundo)}
 .cer .cer-leitura.cer-ativo{background:var(--card)}
-.cer .cer-rolagem{position:sticky;bottom:8px;z-index:4;display:flex;align-items:center;gap:6px;margin-top:12px;padding:8px 10px;background:var(--card);border:1px solid var(--line);border-radius:6px;box-shadow:0 4px 16px rgba(0,0,0,.12)}
+.cer .cer-rolagem{position:sticky;bottom:8px;z-index:4;display:flex;flex-wrap:wrap;align-items:center;gap:6px;margin-top:12px;padding:8px 10px;background:var(--card);border:1px solid var(--line);border-radius:6px;box-shadow:0 4px 16px rgba(0,0,0,.12)}
 .cer .cer-achada{display:block;width:100%;text-align:left;margin:0 0 6px;letter-spacing:0;font-weight:400}
 .cer .cer-acorde{font-weight:700;color:var(--ink)}
 .cer .cer-parte{font-weight:700;color:var(--ouro-escuro)}
@@ -216,3 +216,5 @@ a.botao.sec{background:transparent;color:var(--ouro-escuro)}
 .voz-cifra{font:1rem/1.5 ui-monospace,SFMono-Regular,Menlo,Consolas,monospace;overflow-x:auto}
 .voz-cifra > div:not(.voz-botoes){white-space:pre;padding:0 4px}
 .voz-cifra div.acordes{font-weight:700}
+.voz-calibrar{margin-top:10px}
+.voz-calibrar .voz-medidor{margin-top:6px}
