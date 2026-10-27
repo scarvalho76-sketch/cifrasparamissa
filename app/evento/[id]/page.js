@@ -9,6 +9,7 @@ import Rolagem from '@/components/Rolagem';
 import BuscaMusicas from '@/components/BuscaMusicas';
 import { destacarPartes } from '@/components/Destaque';
 import ConviteBotao from '@/components/ConviteBotao';
+import CifraPre from '@/components/CifraPre';
 
 // Modo evento: a playlist do evento, música a música, com "Já toquei", troca de ordem
 // e músicas novas no fim. Fica guardado no aparelho para abrir sem internet.
@@ -39,6 +40,7 @@ export default function ModoEvento() {
   const [fonte, setFonte] = useState(1);
   const [formato, setFormato] = useState('cifra');
   const [usaCapo, setUsaCapo] = useState(true);
+  const [quebrar, setQuebrar] = useState(true);
   const [ajustes, setAjustes] = useState({});
   const [biblio, setBiblio] = useState(null);
   const [adicionando, setAdicionando] = useState(false);
@@ -65,7 +67,7 @@ export default function ModoEvento() {
 
   useEffect(() => {
     setFonte(lerPref('missa:fonte', 1)); setFormato(lerPref('missa:formato', 'cifra') || 'cifra');
-    setUsaCapo(lerPref('missa:capo', true) ?? true); setAjustes(lerPref(chave(id) + ':ajustes', {}));
+    setUsaCapo(lerPref('missa:capo', true) ?? true); setQuebrar(lerPref('missa:quebrar', true)); setAjustes(lerPref(chave(id) + ':ajustes', {}));
     let cv = new URLSearchParams(location.search).get('c');
     try { if (cv) localStorage.setItem('evento:convite:' + id, cv); else cv = localStorage.getItem('evento:convite:' + id); } catch {}
     setConvite(cv);
@@ -188,6 +190,12 @@ export default function ModoEvento() {
             <button type="button" className={'cer-mini' + (usaCapo ? ' sec' : '')} onClick={() => { setUsaCapo(false); gravarPref('missa:capo', false); }}>Sem capo (teclado)</button>
           </div>
         )}
+        {mostraCifra && (
+          <label className="ev-check" style={{ marginTop: 10 }}>
+            <input type="checkbox" checked={quebrar} onChange={e => { setQuebrar(e.target.checked); gravarPref('missa:quebrar', e.target.checked); }} />
+            Quebrar linhas longas (para caber na tela)
+          </label>
+        )}
         <p className="mut" style={{ fontSize: '.8rem', margin: '8px 0 0' }}>Pedal ou teclado: ← rolagem · → próxima música · ↑ ↓ mover o texto</p>
         {msg && <p className={msg.startsWith('Pronto') ? 'okmsg' : 'err'} style={{ margin: '8px 0 0' }}>{msg}</p>}
       </div>
@@ -247,7 +255,7 @@ export default function ModoEvento() {
                     </span>
                   </div>
                 )}
-                {texto ? <pre className={mostraCifra ? 'cer-cifra' : 'cer-letra'} style={{ fontSize: `${(mostraCifra ? 1 : 1.15) * fonte}rem` }}>{destacarPartes(texto, mostraCifra)}</pre>
+                {texto ? (mostraCifra ? <CifraPre texto={texto} fonte={fonte} quebrar={quebrar} /> : <pre className="cer-letra" style={{ fontSize: `${1.15 * fonte}rem` }}>{destacarPartes(texto, false)}</pre>)
                   : <p className="mut">{mostraCifra ? 'A cifra desta música ainda não foi cadastrada.' : 'A letra desta música ainda não foi cadastrada.'}</p>}
                 <div id={'fim-' + n}>
                   {n < itens.length - 1

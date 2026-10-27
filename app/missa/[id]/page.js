@@ -6,6 +6,7 @@ import { dataLonga, dataHoraCurta, dataIso, simples, fmtData } from '@/lib/util'
 import ConviteBotao from '@/components/ConviteBotao';
 import TextoOracao from '@/components/TextoOracao';
 import Rolagem from '@/components/Rolagem';
+import CifraPre from '@/components/CifraPre';
 import { transporCifra, distancia, nomeDoTom, lerTom, gerarGrade, letraDaCifra, ehLinhaDeAcordes } from '@/lib/musica';
 
 // Modo celebração: só aquela missa, momento a momento (adaptado do Modo cerimônia do Sonata Casamentos).
@@ -144,6 +145,7 @@ export default function Cerimonia() {
   const [fonte, setFonte] = useState(1);
   const [formato, setFormato] = useState(null);
   const [usaCapo, setUsaCapo] = useState(null);
+  const [quebrar, setQuebrar] = useState(true); // quebrar linhas longas da cifra
   const [leituras, setLeituras] = useState(null); // da Liturgia Diária (CNBB), guardadas só no aparelho
   const [salmo, setSalmo] = useState(null);
   const [biblioteca, setBiblioteca] = useState(null); // para a música avulsa
@@ -182,6 +184,7 @@ export default function Cerimonia() {
     setFonte(lerPref('missa:fonte', 1));
     setFormato(lerPref('missa:formato', null));
     setUsaCapo(lerPref('missa:capo', null));
+    setQuebrar(lerPref('missa:quebrar', true));
     setOeSel(lerPref(chaveLocal(escala) + ':oe', null));
   }, [escala]);
   const ajustar = (id, delta) => {
@@ -365,6 +368,12 @@ export default function Cerimonia() {
             ))}
           </span>
         </div>
+        {mostraCifra && (
+          <label className="ev-check" style={{ marginTop: 10 }}>
+            <input type="checkbox" checked={quebrar} onChange={e => { setQuebrar(e.target.checked); gravarPref('missa:quebrar', e.target.checked); }} />
+            Quebrar linhas longas (para caber na tela)
+          </label>
+        )}
         <p className="mut" style={{ fontSize: '.8rem', margin: '8px 0 0' }}>Pedal ou teclado: ← rolagem · → próxima seção · ↑ ↓ mover o texto</p>
         {algumCapo && (
           <div className="row" style={{ marginTop: 10, justifyContent: 'flex-start' }}>
@@ -500,7 +509,7 @@ export default function Cerimonia() {
                 {aviso && <p className="err" style={{ fontSize: '.9rem' }}>{aviso}</p>}
                 {gradeAuto && <p className="mut" style={{ fontSize: '.9rem' }}>Grade montada automaticamente a partir da cifra, com um acorde por compasso: pode não corresponder aos compassos reais.</p>}
                 {querGrade && !i.grade && !gradeAuto && i.cifra && <p className="mut" style={{ fontSize: '.9rem' }}>Não foi possível montar a grade desta cifra; mostrando a cifra.</p>}
-                {texto ? <pre className={mostraCifra ? 'cer-cifra' : 'cer-letra'} style={{ fontSize: `${(mostraCifra ? 1 : 1.15) * fonte}rem` }}>{destacarPartes(texto, mostraCifra)}</pre> : !(salmo && ehSalmo(i)) && falta && <p className="mut">{falta}</p>}
+                {texto ? (mostraCifra ? <CifraPre texto={texto} fonte={fonte} quebrar={quebrar} /> : <pre className="cer-letra" style={{ fontSize: `${1.15 * fonte}rem` }}>{destacarPartes(texto, false)}</pre>) : !(salmo && ehSalmo(i)) && falta && <p className="mut">{falta}</p>}
                 {salmo && ehSalmo(i) && (
                   <div style={{ marginTop: texto ? 14 : 0 }}>
                     <p style={{ margin: '0 0 8px', fontWeight: 600 }}>Salmo do dia <span className="mut">{salmo.referencia}</span></p>
