@@ -9,7 +9,7 @@ self.addEventListener('fetch', (event) => {
   if (req.method !== 'GET') return;
   const url = new URL(req.url);
   if (url.origin !== self.location.origin) return;
-  const pagina = req.mode === 'navigate' && (url.pathname.startsWith('/missa/') || url.pathname.startsWith('/m/'));
+  const pagina = req.mode === 'navigate' && (url.pathname.startsWith('/missa/') || url.pathname.startsWith('/m/') || url.pathname.startsWith('/evento/'));
   const arquivo = url.pathname.startsWith('/_next/static/') || url.pathname === '/emblema.webp';
   if (!pagina && !arquivo) return;
   event.respondWith(

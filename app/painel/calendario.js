@@ -13,11 +13,13 @@ const chaveDia = d => `${d.getFullYear()}-${p2(d.getMonth() + 1)}-${p2(d.getDate
 // cor do cartão pelo tempo litúrgico
 const COR = { 'Tempo Comum': 'verde', Advento: 'roxo', Quaresma: 'roxo', 'Semana Santa': 'vermelho', Natal: 'branco', 'Páscoa': 'branco', 'Solenidade / Festa': 'branco' };
 
-export default function Calendario({ onAbrir, onNova }) {
+export default function Calendario({ onAbrir, onNova, onAbrirEvento, onNovoEvento }) {
   const agora = new Date();
   const [mes, setMes] = useState(() => { const s = lerPref('calendario:mes', null); return s || `${agora.getFullYear()}-${p2(agora.getMonth() + 1)}`; });
   const [missas, setMissas] = useState([]);
   const [resumo, setResumo] = useState({});
+  const [eventos, setEventos] = useState([]);
+  const [escolha, setEscolha] = useState(null); // dia em que o "+" foi tocado (missa ou evento?)
   const [carregando, setCarregando] = useState(true);
   const [ano, m] = mes.split('-').map(Number);
 
@@ -29,6 +31,9 @@ export default function Calendario({ onAbrir, onNova }) {
       const { data } = await supabase.from('missa_celebracoes').select('id, data_hora, titulo, local, tempo')
         .gte('data_hora', ini.toISOString()).lt('data_hora', fim.toISOString()).order('data_hora');
       setMissas(data || []);
+      const { data: evs } = await supabase.from('missa_eventos').select('id, data_hora, tipo, nome, local')
+        .gte('data_hora', ini.toISOString()).lt('data_hora', fim.toISOString()).order('data_hora');
+      setEventos(evs || []);
       const ids = (data || []).map(x => x.id);
       if (ids.length) {
         const { data: its } = await supabase.from('missa_itens').select('celebracao_id, musica_id').in('celebracao_id', ids);
@@ -42,12 +47,26 @@ export default function Calendario({ onAbrir, onNova }) {
   const mudar = d => { const x = new Date(ano, m - 1 + d, 1); setMes(`${x.getFullYear()}-${p2(x.getMonth() + 1)}`); };
   const hojeMes = () => setMes(`${agora.getFullYear()}-${p2(agora.getMonth() + 1)}`);
   const dias = useMemo(() => { const n = new Date(ano, m, 0).getDate(); return Array.from({ length: n }, (_, k) => new Date(ano, m - 1, k + 1)); }, [ano, m]);
-  const porDia = useMemo(() => { const r = {}; missas.forEach(x => { const k = chaveDia(new Date(x.data_hora)); (r[k] ||= []).push(x); }); return r; }, [missas]);
+  const porDia = useMemo(() => {
+    const r = {};
+    missas.forEach(x => { const k = chaveDia(new Date(x.data_hora)); (r[k] ||= []).push(x); });
+    eventos.forEach(x => { const k = chaveDia(new Date(x.data_hora)); (r[k] ||= []).push({ ...x, evento: true }); });
+    Object.values(r).forEach(l => l.sort((a, b) => new Date(a.data_hora) - new Date(b.data_hora)));
+    return r;
+  }, [missas, eventos]);
   const hoje = chaveDia(agora);
   const vazios = dias[0].getDay();
-  const nova = d => onNova(`${p2(d.getDate())}/${p2(d.getMonth() + 1)}/${d.getFullYear()}`);
+  const txtData = d => `${p2(d.getDate())}/${p2(d.getMonth() + 1)}/${d.getFullYear()}`;
+  const nova = d => onNova(txtData(d));
+  const novoEvento = d => onNovoEvento(txtData(d));
 
   const Cartao = ({ x }) => {
+    if (x.evento) return (
+      <button type="button" className="cal-missa cal-evento" onClick={() => onAbrirEvento(x.id)} title="Abrir o evento">
+        <span className="cal-hora">♪ {fmtHora(x.data_hora)}</span> <span className="cal-tit">{x.nome || x.tipo || 'Evento'}</span>
+        <span className="cal-local">{[x.nome ? x.tipo : '', x.local].filter(Boolean).join(' · ')}</span>
+      </button>
+    );
     const r = resumo[x.id] || { total: 0, faltam: 0 };
     return (
       <button type="button" className={'cal-missa cal-' + (COR[x.tempo] || 'verde')} onClick={() => onAbrir(x.id)} title="Abrir a missa">
@@ -73,6 +92,7 @@ export default function Calendario({ onAbrir, onNova }) {
         <li><span className="cal-ponto cal-roxo" />Advento / Quaresma</li>
         <li><span className="cal-ponto cal-branco" />Natal / Páscoa / Solenidade</li>
         <li><span className="cal-ponto cal-vermelho" />Semana Santa</li>
+        <li><span className="cal-ponto cal-evento" />♪ Evento</li>
       </ul>
       {carregando && <p className="mut">Carregando…</p>}
 
@@ -86,8 +106,14 @@ export default function Calendario({ onAbrir, onNova }) {
             <div key={k} className={'cal-dia' + (d.getDay() === 0 ? ' cal-domingo' : '')}>
               <div className="cal-num-linha">
                 <span className={'cal-num' + (k === hoje ? ' cal-hoje' : '')}>{d.getDate()}</span>
-                <button type="button" className="cal-mais" onClick={() => nova(d)} aria-label={`Nova missa no dia ${d.getDate()}`}>+</button>
+                <button type="button" className="cal-mais" onClick={() => setEscolha(escolha === k ? null : k)} aria-label={`Criar no dia ${d.getDate()}`}>+</button>
               </div>
+              {escolha === k && (
+                <div className="cal-escolha">
+                  <button type="button" className="mini" onClick={() => nova(d)}>Missa</button>
+                  <button type="button" className="mini sec" onClick={() => novoEvento(d)}>Evento</button>
+                </div>
+              )}
               {(porDia[k] || []).map(x => <Cartao key={x.id} x={x} />)}
             </div>
           );
@@ -104,13 +130,14 @@ export default function Calendario({ onAbrir, onNova }) {
               <div className="cal-li-data"><strong>{p2(d.getDate())}</strong><span>{DIAS[d.getDay()]}</span></div>
               <div className="cal-li-conteudo">
                 {ms.map(x => <Cartao key={x.id} x={x} />)}
-                <button type="button" className="cal-li-mais" onClick={() => nova(d)}>{ms.length ? '+ outra missa' : '+ missa'}</button>
+                <button type="button" className="cal-li-mais" onClick={() => nova(d)}>+ missa</button>
+                <button type="button" className="cal-li-mais" style={{ marginLeft: 14 }} onClick={() => novoEvento(d)}>+ evento</button>
               </div>
             </li>
           );
         })}
       </ol>
-      {!carregando && missas.length === 0 && <p className="mut" style={{ marginTop: 10 }}>Nenhuma missa cadastrada em {MESES[m - 1].toLowerCase()}.</p>}
+      {!carregando && missas.length === 0 && eventos.length === 0 && <p className="mut" style={{ marginTop: 10 }}>Nada cadastrado em {MESES[m - 1].toLowerCase()}.</p>}
     </>
   );
 }

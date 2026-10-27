@@ -7,12 +7,13 @@ import Missas from './missas';
 import Biblioteca from './biblioteca';
 import Configuracoes from './configuracoes';
 import Calendario from './calendario';
+import Eventos from './eventos';
 import { lerConta, apagarConta } from '@/lib/conta';
 
 // Músicos, Momentos, Orações e Amigos ficam dentro de Configurações (só o administrador vê)
-const ABAS_ADMIN = [['missas', 'Missas'], ['calendario', 'Calendário'], ['biblioteca', 'Biblioteca'], ['config', 'Configurações']];
+const ABAS_ADMIN = [['missas', 'Missas'], ['eventos', 'Eventos'], ['calendario', 'Calendário'], ['biblioteca', 'Biblioteca'], ['config', 'Configurações']];
 // Por enquanto, amigos não cadastram músicos (aba só do administrador)
-const ABAS_CONTA = [['missas', 'Missas'], ['calendario', 'Calendário'], ['biblioteca', 'Biblioteca']];
+const ABAS_CONTA = [['missas', 'Missas'], ['eventos', 'Eventos'], ['calendario', 'Calendário'], ['biblioteca', 'Biblioteca']];
 
 export default function Painel() {
   const r = useRouter();
@@ -71,7 +72,12 @@ export default function Painel() {
         <button style={{ marginLeft: 'auto' }} onClick={sair}>Sair</button>
       </div>
       {aba === 'missas' && <Missas alvo={alvo} />}
-      {aba === 'calendario' && <Calendario onAbrir={id => { setAlvo({ missa: id, t: Date.now() }); trocar('missas'); }} onNova={data => { setAlvo({ nova: data, t: Date.now() }); trocar('missas'); }} />}
+      {aba === 'eventos' && <Eventos alvo={alvo} />}
+      {aba === 'calendario' && <Calendario
+        onAbrir={id => { setAlvo({ missa: id, t: Date.now() }); trocar('missas'); }}
+        onNova={data => { setAlvo({ nova: data, t: Date.now() }); trocar('missas'); }}
+        onAbrirEvento={id => { setAlvo({ evento: id, t: Date.now() }); trocar('eventos'); }}
+        onNovoEvento={data => { setAlvo({ novoEvento: data, t: Date.now() }); trocar('eventos'); }} />}
       {aba === 'biblioteca' && <Biblioteca />}
       {aba === 'config' && quem?.tipo === 'admin' && <Configuracoes />}
     </div>

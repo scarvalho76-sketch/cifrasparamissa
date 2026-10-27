@@ -184,3 +184,23 @@ a.botao.sec{background:transparent;color:var(--ouro-escuro)}
   .tabs{flex-wrap:wrap;overflow-x:visible}
   .tabs button{min-height:36px;padding:6px 12px;font-size:.92rem}
 }
+
+/* Busca de músicas (eventos) */
+.busca-lista{list-style:none;margin:8px 0 0;padding:0;border:1px solid var(--line);border-radius:3px;max-height:360px;overflow-y:auto;background:var(--card)}
+.busca-lista li{display:flex;align-items:center;gap:8px;padding:8px 10px;border-top:1px solid var(--line)}
+.busca-lista li:first-child{border-top:0}
+.busca-mom{display:block;font-size:.75rem;color:var(--ouro-escuro)}
+/* Playlist do evento */
+.playlist{list-style:none;margin:0;padding:0}
+.playlist li{display:flex;align-items:center;gap:8px;padding:8px 0;border-top:1px solid var(--line)}
+.playlist li:first-child{border-top:0}
+.playlist .pos{flex:none;width:26px;height:26px;border-radius:50%;border:1px solid var(--ouro);display:grid;place-items:center;font-size:.8rem;color:var(--ouro-escuro)}
+.playlist .tocada{opacity:.55}
+.cal-evento{background:rgba(60,110,134,.14);border-color:var(--azul)} .cal-ponto.cal-evento{background:var(--azul)}
+.ev-tocada .cer-musica{text-decoration:line-through;opacity:.65}
+.ev-check{display:flex;align-items:center;gap:6px;font-size:.9rem;color:var(--ink);margin:0}
+.ev-check input{width:20px;height:20px;margin:0}
+
+.cal-escolha{display:flex;gap:4px;margin:0 0 4px}
+.cal-escolha button{min-height:28px;padding:2px 8px;font-size:.78rem}
+.cal-dia:has(.cal-escolha) .cal-mais{opacity:1}
