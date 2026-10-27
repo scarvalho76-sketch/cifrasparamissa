@@ -11,14 +11,14 @@ import Eventos from './eventos';
 import { lerConta, apagarConta } from '@/lib/conta';
 
 // Músicos, Momentos, Orações e Amigos ficam dentro de Configurações (só o administrador vê)
-const ABAS_ADMIN = [['missas', 'Missas'], ['eventos', 'Eventos'], ['calendario', 'Calendário'], ['biblioteca', 'Biblioteca'], ['config', 'Configurações']];
+const ABAS_ADMIN = [['calendario', 'Calendário'], ['missas', 'Missas'], ['eventos', 'Eventos'], ['biblioteca', 'Biblioteca'], ['config', 'Configurações']];
 // Por enquanto, amigos não cadastram músicos (aba só do administrador)
-const ABAS_CONTA = [['missas', 'Missas'], ['eventos', 'Eventos'], ['calendario', 'Calendário'], ['biblioteca', 'Biblioteca']];
+const ABAS_CONTA = [['calendario', 'Calendário'], ['missas', 'Missas'], ['eventos', 'Eventos'], ['biblioteca', 'Biblioteca']];
 
 export default function Painel() {
   const r = useRouter();
   const [ok, setOk] = useState(false);
-  const [aba, setAba] = useState('missas');
+  const [aba, setAba] = useState('calendario');
   const [semSessao, setSemSessao] = useState(false);
   const [quem, setQuem] = useState(null);
   const [alvo, setAlvo] = useState(null); // do Calendário para Missas: { missa: id } ou { nova: 'dd/mm/aaaa' } // { tipo: 'admin' } ou { tipo: 'conta', nome }
@@ -39,10 +39,8 @@ export default function Painel() {
         return r.replace('/');
       }
       setQuem(q);
-      const abas = q.tipo === 'admin' ? ABAS_ADMIN : ABAS_CONTA;
-      let salva = lerPref('painel:aba', 'missas');
-      if (['musicos', 'momentos', 'oracoes', 'amigos'].includes(salva)) { gravarPref('painel:config', salva); salva = 'config'; gravarPref('painel:aba', 'config'); }
-      setAba(abas.some(([k]) => k === salva) ? salva : 'missas'); setOk(true);
+      // o painel sempre abre no Calendário
+      setAba('calendario'); setOk(true);
     })();
   }, [r]);
 
