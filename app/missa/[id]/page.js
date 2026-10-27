@@ -490,9 +490,10 @@ export default function Cerimonia() {
                       {ajuste ? <span className="mut"> · ajuste manual {meioTom(ajuste)}</span> : null}
                     </span>
                     <span className="row" style={{ gap: 6 }}>
+                      {/* Desfazer vem antes e sempre ocupa o lugar (invisível sem ajuste): os botões de ½ tom não mudam de posição */}
+                      <button type="button" className="sec cer-mini" onClick={() => ajustar(i.id, null)} disabled={ajuste === 0} aria-hidden={ajuste === 0} tabIndex={ajuste === 0 ? -1 : 0} style={{ visibility: ajuste === 0 ? 'hidden' : 'visible' }}>Desfazer</button>
                       <button type="button" className="sec cer-mini" onClick={() => ajustar(i.id, -1)}>−½ tom</button>
                       <button type="button" className="sec cer-mini" onClick={() => ajustar(i.id, 1)}>+½ tom</button>
-                      {ajuste !== 0 && <button type="button" className="sec cer-mini" onClick={() => ajustar(i.id, null)}>Desfazer</button>}
                     </span>
                   </div>
                 )}
