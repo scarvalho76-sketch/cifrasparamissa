@@ -20,6 +20,7 @@ export default function RootLayout({ children }) {
             <img src="/emblema.webp" alt="" />
             <span className="marca"><strong>CANTUS</strong><small>Músicas para a Santa Missa</small></span>
           </a>
+          <a className="credito" href="https://instagram.com/scarvalh05" target="_blank" rel="noopener noreferrer">@Sergio Carvalho</a>
         </header>
         {children}
       </body>
