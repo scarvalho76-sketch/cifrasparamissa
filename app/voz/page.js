@@ -1,7 +1,7 @@
 'use client';
 import { useEffect, useMemo, useRef, useState } from 'react';
 import { carregarBiblioteca } from '@/lib/biblioteca';
-import { letraDaCifra } from '@/lib/musica';
+import { letraDaCifra, ehLinhaDeAcordes } from '@/lib/musica';
 import { simples } from '@/lib/util';
 import BuscaMusicas from '@/components/BuscaMusicas';
 
@@ -31,8 +31,12 @@ export default function TesteVoz() {
     setTemReconhecimento(!!(window.SpeechRecognition || window.webkitSpeechRecognition));
     carregarBiblioteca().then(setBiblio); return () => parar();
   }, []);
-  const linhas = useMemo(() => (musica ? (musica.letra || letraDaCifra(musica.cifra)).split('\n') : []), [musica]);
-  const linhasPal = useMemo(() => linhas.map(palavras), [linhas]);
+  const [verCifra, setVerCifra] = useState(true);
+  // linhas mostradas: a cifra (acordes + letra) ou só a letra.
+  // A busca por palavras usa só as linhas de letra; as de acordes e [partes] ficam com "palavras" vazias.
+  const linhas = useMemo(() => (!musica ? [] : (verCifra && musica.cifra ? musica.cifra : (musica.letra || letraDaCifra(musica.cifra))).split('\n')), [musica, verCifra]);
+  const ehAcordeLinha = l => !!l.trim() && (ehLinhaDeAcordes(l.trim()) || /^\s*\[[^\]]+\]\s*$/.test(l));
+  const linhasPal = useMemo(() => linhas.map(l => (ehAcordeLinha(l) ? [] : palavras(l))), [linhas]);
   const anotar = t => setEventos(e => [`${new Date().toLocaleTimeString('pt-BR')} ${t}`, ...e].slice(0, 12));
 
   // microfone e medidor de volume
@@ -147,8 +151,16 @@ export default function TesteVoz() {
         {ouvido && <p style={{ fontSize: '.9rem', margin: 0 }}>Entendi: <em>{ouvido}</em></p>}
       </div>
       {musica && (
-        <div className="card voz-letra">
-          {linhas.map((l, i) => <div key={i} ref={el => { refs.current[i] = el; }} className={i === atual ? 'atual' : ''} onClick={() => setAtual(i)}>{l || ' '}</div>)}
+        <div className={'card voz-letra' + (verCifra ? ' voz-cifra' : '')}>
+          <div className="row voz-botoes" style={{ justifyContent: 'flex-end', gap: 6, marginBottom: 8 }}>
+            <button type="button" className={'mini' + (verCifra ? ' sec' : '')} onClick={() => { setVerCifra(false); setAtual(0); }}>Letra</button>
+            <button type="button" className={'mini' + (verCifra ? '' : ' sec')} onClick={() => { setVerCifra(true); setAtual(0); }}>Cifra</button>
+          </div>
+          {linhas.map((l, i) => {
+            // destaca a linha atual e, na cifra, a linha de acordes logo acima dela
+            const ativa = i === atual || (verCifra && i === atual - 1 && ehAcordeLinha(l));
+            return <div key={i} ref={el => { refs.current[i] = el; }} className={(ativa ? 'atual' : '') + (ehAcordeLinha(l) ? ' acordes' : '')} onClick={() => setAtual(i)}>{l || ' '}</div>;
+          })}
         </div>
       )}
       {eventos.length > 0 && <div className="card mut" style={{ fontSize: '.8rem' }}>{eventos.map((e, i) => <div key={i}>{e}</div>)}</div>}
