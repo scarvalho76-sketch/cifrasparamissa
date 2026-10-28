@@ -3,6 +3,9 @@ import { useEffect, useMemo, useState } from 'react';
 import { supabase } from '@/lib/supabase';
 import { gerarGrade, lerTom, letraDaCifra, nomeDoTom } from '@/lib/musica';
 import { lerPdfDeCifra } from '@/lib/pdfCifra';
+import { lerTxtDeCifra } from '@/lib/txtCifra';
+const ehTxt = arq => /\.txt$/i.test(arq.name) || arq.type === 'text/plain';
+const lerArquivo = arq => (ehTxt(arq) ? lerTxtDeCifra(arq) : lerPdfDeCifra(arq));
 import { chave, simples, dataCurta, TEMPOS_ESPECIFICOS, nomeTempo } from '@/lib/util';
 import { ehConta } from '@/lib/conta';
 
@@ -16,7 +19,7 @@ function Editor({ ficha, inicial, onSalvo, onCancelar, existentes }) {
     ...vazio, ...(ficha || {}),
     ...(inicial ? { nome: inicial.nome || '', artista: inicial.artista || '', cifra: inicial.cifra || '', tom_original: inicial.tom || '', capo: inicial.capo || 0, tom_padrao: inicial.tomReal || '', letra: '' } : {})
   }));
-  const [msg, setMsg] = useState(inicial && !inicial.tom ? 'Não encontrei o tom no PDF: preencha o tom original.' : '');
+  const [msg, setMsg] = useState(inicial && !inicial.tom ? 'Não encontrei o tom no arquivo: preencha o tom original.' : '');
   const [lendo, setLendo] = useState(false);
   const set = k => e => setF({ ...f, [k]: e.target.value });
   const tomInvalido = t => t.trim() && !lerTom(t);
@@ -24,13 +27,14 @@ function Editor({ ficha, inicial, onSalvo, onCancelar, existentes }) {
   async function importar(e) {
     const arq = e.target.files?.[0]; e.target.value = '';
     if (!arq) return;
-    if (f.cifra.trim() && !confirm('Substituir a cifra atual pela do PDF?')) return;
-    setMsg(''); setLendo(true);
+    const tipo = ehTxt(arq) ? 'arquivo' : 'PDF';
+    if (f.cifra.trim() && !confirm(`Substituir a cifra atual pela do ${tipo}?`)) return;
+    setMsg(''); setLendo(tipo);
     try {
-      const r = await lerPdfDeCifra(arq);
+      const r = await lerArquivo(arq);
       setF({ ...f, nome: f.nome || r.nome || '', artista: f.artista || r.artista || '', cifra: r.cifra, letra: '', tom_original: r.tom || f.tom_original, ...(r.capo ? { capo: r.capo, tom_padrao: f.tom_padrao || r.tomReal || '' } : {}) });
-      setMsg(r.tom ? '' : 'PDF lido. Não encontrei o tom no arquivo: preencha o tom original.');
-    } catch (err) { setMsg('Não foi possível ler o PDF: ' + err.message); }
+      setMsg(r.tom ? '' : `${tipo === 'PDF' ? 'PDF lido' : 'Arquivo lido'}. Não encontrei o tom no arquivo: preencha o tom original.`);
+    } catch (err) { setMsg(`Não foi possível ler o ${tipo}: ` + err.message); }
     setLendo(false);
   }
 
@@ -66,10 +70,14 @@ function Editor({ ficha, inicial, onSalvo, onCancelar, existentes }) {
         <div><label>Nome da música</label><input value={f.nome} onChange={set('nome')} /></div>
         <div><label>Cantor / autor (opcional)</label><input value={f.artista} onChange={set('artista')} /></div>
       </div>
-      <div style={{ marginBottom: 12 }}>
+      <div className="row" style={{ justifyContent: 'flex-start', gap: 8, marginBottom: 12 }}>
         <label style={{ display: 'inline-block', cursor: 'pointer', border: '1px solid var(--ouro)', borderRadius: 3, padding: '6px 12px', color: 'var(--ouro-escuro)', margin: 0 }}>
-          {lendo ? 'Lendo o PDF…' : '📄 Importar cifra de um PDF'}
+          {lendo === 'PDF' ? 'Lendo o PDF…' : '📄 Importar cifra de um PDF'}
           <input type="file" accept="application/pdf" onChange={importar} style={{ display: 'none' }} />
+        </label>
+        <label style={{ display: 'inline-block', cursor: 'pointer', border: '1px solid var(--ouro)', borderRadius: 3, padding: '6px 12px', color: 'var(--ouro-escuro)', margin: 0 }}>
+          {lendo === 'arquivo' ? 'Lendo o arquivo…' : '📝 Importar de um arquivo de texto'}
+          <input type="file" accept=".txt,text/plain" onChange={importar} style={{ display: 'none' }} />
         </label>
       </div>
       <label>Cifra: acordes em cima da letra, como no Cifra Club</label>
@@ -164,7 +172,7 @@ export default function Biblioteca() {
     const novos = [];
     for (const arq of arqs) {
       const id = arq.name + Date.now() + Math.random();
-      try { novos.push({ id, arquivo: arq.name, dados: await lerPdfDeCifra(arq) }); }
+      try { novos.push({ id, arquivo: arq.name, dados: await lerArquivo(arq) }); }
       catch (err) { novos.push({ id, arquivo: arq.name, erro: err.message }); }
     }
     setImportados(x => [...x, ...novos]); setLendo(false);
@@ -211,6 +219,10 @@ export default function Biblioteca() {
             {lendo ? 'Lendo…' : '📄 Importar PDFs'}
             <input type="file" accept="application/pdf" multiple onChange={importarVarios} style={{ display: 'none' }} />
           </label>
+          <label style={{ display: 'inline-block', cursor: 'pointer', border: '1px solid var(--ouro)', borderRadius: 3, padding: '8px 14px', color: 'var(--ouro-escuro)', margin: 0, fontSize: '1rem' }}>
+            {lendo ? 'Lendo…' : '📝 Importar textos'}
+            <input type="file" accept=".txt,text/plain" multiple onChange={importarVarios} style={{ display: 'none' }} />
+          </label>
           <button className="sec" onClick={() => setAberto(aberto === 'novo' ? null : 'novo')}>{aberto === 'novo' ? 'Fechar' : '+ Música'}</button>
         </span>}
       </div>
@@ -219,7 +231,7 @@ export default function Biblioteca() {
       {importados.length > 0 && <p className="mut">Revise cada música importada e toque em Salvar.</p>}
       {importados.map(i => (
         <div key={i.id} className="card" style={{ borderLeft: '4px solid var(--ouro)' }}>
-          <div className="row"><strong>📄 {i.arquivo}</strong><button className="sec mini" onClick={() => tirar(i.id)}>Descartar</button></div>
+          <div className="row"><strong>{/\.txt$/i.test(i.arquivo) ? '📝' : '📄'} {i.arquivo}</strong><button className="sec mini" onClick={() => tirar(i.id)}>Descartar</button></div>
           {i.erro ? <p className="err">{i.erro}</p> : <Editor inicial={i.dados} existentes={existentes} onSalvo={() => { tirar(i.id); carregar(); }} onCancelar={() => tirar(i.id)} />}
         </div>
       ))}
@@ -242,7 +254,7 @@ export default function Biblioteca() {
           {TEMPOS_ESPECIFICOS.map(t => <option key={t} value={t}>Só {nomeTempo(t)}</option>)}
         </select>
       </div>
-      {vis.length === 0 && <div className="card mut">{fichas.length ? 'Nenhuma música encontrada.' : (leitura ? 'A Biblioteca ainda está vazia.' : 'A Biblioteca está vazia. Importe PDFs do Cifra Club ou cadastre uma música.')}</div>}
+      {vis.length === 0 && <div className="card mut">{fichas.length ? 'Nenhuma música encontrada.' : (leitura ? 'A Biblioteca ainda está vazia.' : 'A Biblioteca está vazia. Importe PDFs do Cifra Club, arquivos de texto ou cadastre uma música.')}</div>}
       {vis.map(x => (
         <div key={x.id} className="card">
           <div className="row">
