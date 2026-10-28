@@ -208,16 +208,10 @@ a.botao.sec{background:transparent;color:var(--ouro-escuro)}
 .cal-escolha button{min-height:28px;padding:2px 8px;font-size:.78rem}
 .cal-dia:has(.cal-escolha) .cal-mais{opacity:1}
 
-/* Teste de rolagem pela voz */
+/* Rolagem pela voz: calibração */
 .voz-medidor{position:relative;height:14px;border:1px solid var(--line);border-radius:7px;background:var(--fundo);overflow:hidden;margin-top:8px}
 .voz-medidor div{height:100%;background:var(--mut);transition:width .05s}
 .voz-medidor div.on{background:var(--ok)}
 .voz-medidor span{position:absolute;top:-2px;bottom:-2px;width:2px;background:var(--bad)}
-.voz-letra{font-size:1.25rem;line-height:1.7}
-.voz-letra div{padding:0 6px;border-radius:3px;cursor:pointer}
-.voz-letra div.atual{background:rgba(176,138,62,.22);font-weight:600}
-.voz-cifra{font:1rem/1.5 ui-monospace,SFMono-Regular,Menlo,Consolas,monospace;overflow-x:auto}
-.voz-cifra > div:not(.voz-botoes){white-space:pre;padding:0 4px}
-.voz-cifra div.acordes{font-weight:700}
 .voz-calibrar{margin-top:10px}
 .voz-calibrar .voz-medidor{margin-top:6px}
