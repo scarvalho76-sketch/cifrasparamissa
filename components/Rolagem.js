@@ -5,7 +5,7 @@ import { ehLinhaDeAcordes } from '@/lib/musica';
 import { abrirMicrofone, nivel, limiar, lerCalibracao, ouvirPalavras, palavras } from '@/lib/voz';
 
 // Rolagem automática do momento aberto: rola a tela até o botão do próximo momento aparecer.
-// Velocidade de 1 a 10, lembrada no aparelho. Tocar no texto também pausa/retoma.
+// Velocidade de 1 a 10, lembrada no aparelho. Um toque rápido no texto pausa; arrastar não para.
 const PX_POR_SEG = v => Math.round(6 * Math.pow(1.38, v - 1)); // 1 ≈ 6 px/s … 10 ≈ 110 px/s
 export default function Rolagem({ alvoId }) {
   const [rolando, setRolando] = useState(false);
@@ -35,21 +35,49 @@ export default function Rolagem({ alvoId }) {
   useEffect(() => {
     if (!rolando) return;
     const e = estado.current; e.ultimo = 0; e.resto = 0;
+    let dedo = null;   // toque em andamento: enquanto o dedo está na tela, a rolagem espera
+    let espera = 0;    // depois de soltar, espera o embalo do arrasto acabar
     const passo = t => {
       if (!e.ultimo) e.ultimo = t;
       const dt = Math.min(0.1, (t - e.ultimo) / 1000); e.ultimo = t;
-      e.resto += PX_POR_SEG(vel) * dt;
-      const px = Math.floor(e.resto);
-      if (px >= 1) { window.scrollBy(0, px); e.resto -= px; }
-      if (chegou()) { setRolando(false); return; }
+      if (dedo || Date.now() < espera) e.ultimo = 0;
+      else {
+        e.resto += PX_POR_SEG(vel) * dt;
+        const px = Math.floor(e.resto);
+        if (px >= 1) { window.scrollBy(0, px); e.resto -= px; }
+        if (chegou()) { setRolando(false); return; }
+      }
       e.quadro = requestAnimationFrame(passo);
     };
     e.quadro = requestAnimationFrame(passo);
-    // tocar no texto da música pausa
-    const tocar = ev => { if (!barra.current?.contains(ev.target)) setRolando(false); };
+    // Arrastar o texto não para a rolagem: ela espera o dedo sair e continua dali.
+    // Só um toque rápido, sem arrastar, pausa.
+    const fora = ev => barra.current?.contains(ev.target);
+    const desceu = ev => { if (fora(ev)) return; dedo = { x: ev.clientX, y: ev.clientY, t: Date.now(), moveu: false }; };
+    const moveu = ev => { if (dedo && Math.hypot(ev.clientX - dedo.x, ev.clientY - dedo.y) > 10) dedo.moveu = true; };
+    // no celular, quando o navegador assume o arrasto chega "pointercancel" com o dedo ainda na tela:
+    // aí só conta como solto no "touchend"
+    const assumiu = () => { if (dedo) dedo.moveu = true; };
+    const subiu = ev => {
+      if (!dedo) return;
+      if (ev.type === 'pointerup' && ev.pointerType === 'touch' && dedo.moveu) return; // espera o touchend
+      const toque = !dedo.moveu && Date.now() - dedo.t < 400 && ev.type !== 'touchcancel';
+      dedo = null; e.ultimo = 0; e.resto = 0;
+      if (toque) setRolando(false); else espera = Date.now() + 300;
+    };
+    const embalo = () => { if (Date.now() < espera) espera = Math.max(espera, Date.now() + 250); };
     const sumiu = () => { if (document.visibilityState !== 'visible') setRolando(false); };
-    document.addEventListener('pointerdown', tocar); document.addEventListener('visibilitychange', sumiu);
-    return () => { cancelAnimationFrame(e.quadro); document.removeEventListener('pointerdown', tocar); document.removeEventListener('visibilitychange', sumiu); };
+    document.addEventListener('pointerdown', desceu); document.addEventListener('pointermove', moveu, { passive: true });
+    document.addEventListener('pointerup', subiu); document.addEventListener('pointercancel', assumiu);
+    document.addEventListener('touchend', subiu); document.addEventListener('touchcancel', subiu);
+    document.addEventListener('visibilitychange', sumiu); window.addEventListener('scroll', embalo, { passive: true });
+    return () => {
+      cancelAnimationFrame(e.quadro); window.removeEventListener('scroll', embalo);
+      document.removeEventListener('pointerdown', desceu); document.removeEventListener('pointermove', moveu);
+      document.removeEventListener('pointerup', subiu); document.removeEventListener('pointercancel', assumiu);
+      document.removeEventListener('touchend', subiu); document.removeEventListener('touchcancel', subiu);
+      document.removeEventListener('visibilitychange', sumiu);
+    };
   }, [rolando, vel, alvoId]);
 
   // Rolagem por voz: desce enquanto há voz (acima do limiar calibrado) e,
