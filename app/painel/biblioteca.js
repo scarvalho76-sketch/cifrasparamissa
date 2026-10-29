@@ -8,6 +8,7 @@ const ehTxt = arq => /\.txt$/i.test(arq.name) || arq.type === 'text/plain';
 const lerArquivo = arq => (ehTxt(arq) ? lerTxtDeCifra(arq) : lerPdfDeCifra(arq));
 import { chave, simples, dataCurta, TEMPOS_ESPECIFICOS, nomeTempo } from '@/lib/util';
 import { ehConta } from '@/lib/conta';
+import Paginacao, { paginar } from '@/components/Paginacao';
 
 // Biblioteca de letras e cifras das missas: uma ficha por música (nome + artista).
 // Mesma lógica do Sonata Casamentos: cifra única, letra tirada da cifra, transposição pelo tom original.
@@ -145,6 +146,8 @@ export default function Biblioteca() {
   const [momFiltro, setMomFiltro] = useState('');
   const [tempoFiltro, setTempoFiltro] = useState('');
   const leitura = ehConta(); // amigos só consultam a Biblioteca
+  const [pagina, setPagina] = useState(0);
+  useEffect(() => { setPagina(0); }, [filtro, busca, momFiltro, tempoFiltro]);
 
   const carregar = async () => {
     const agora = new Date(Date.now() - 12 * 3600e3).toISOString();
@@ -208,6 +211,8 @@ export default function Biblioteca() {
     if (filtro === 'proximas') return !!usos[x.id];
     return true;
   });
+  const folha = paginar(vis, pagina); // 25 músicas por página
+  const filtrando = filtro !== 'todas' || busca.trim() || momFiltro || tempoFiltro;
   const selo = (ok, txt) => <span className={'chip' + (ok ? ' on' : '')} style={{ cursor: 'default' }}>{ok ? '✓' : '✗'} {txt}</span>;
 
   return (
@@ -254,8 +259,14 @@ export default function Biblioteca() {
           {TEMPOS_ESPECIFICOS.map(t => <option key={t} value={t}>Só {nomeTempo(t)}</option>)}
         </select>
       </div>
+      <div id="bib-lista" />
+      {fichas.length > 0 && <p className="mut" style={{ fontSize: '.9rem', margin: '0 0 10px' }}>
+        <strong>{fichas.length}</strong> {fichas.length === 1 ? 'música cadastrada' : 'músicas cadastradas'}
+        {filtrando ? <> · mostrando <strong>{vis.length}</strong> com este filtro</> : null}
+        {folha.paginas > 1 ? ` · página ${folha.pag + 1} de ${folha.paginas}` : ''}
+      </p>}
       {vis.length === 0 && <div className="card mut">{fichas.length ? 'Nenhuma música encontrada.' : (leitura ? 'A Biblioteca ainda está vazia.' : 'A Biblioteca está vazia. Importe PDFs do Cifra Club, arquivos de texto ou cadastre uma música.')}</div>}
-      {vis.map(x => (
+      {folha.itens.map(x => (
         <div key={x.id} className="card">
           <div className="row">
             <span><strong>{x.nome}</strong>{x.artista ? <span className="mut"> · {x.artista}</span> : null}</span>
@@ -297,6 +308,7 @@ export default function Biblioteca() {
           {aberto === x.id && !leitura && <Editor ficha={x} existentes={existentes} onSalvo={() => { setAberto(null); carregar(); }} onCancelar={() => setAberto(null)} />}
         </div>
       ))}
+      <Paginacao pag={folha.pag} paginas={folha.paginas} onMudar={setPagina} rolarPara="bib-lista" />
     </>
   );
 }

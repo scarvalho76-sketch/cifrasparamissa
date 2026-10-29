@@ -215,3 +215,6 @@ a.botao.sec{background:transparent;color:var(--ouro-escuro)}
 .voz-medidor span{position:absolute;top:-2px;bottom:-2px;width:2px;background:var(--bad)}
 .voz-calibrar{margin-top:10px}
 .voz-calibrar .voz-medidor{margin-top:6px}
+
+/* Modo celebração/evento em tablet deitado e computador: usa mais da largura da tela */
+@media (min-width:900px){ .wrap.cer{max-width:1000px} }
