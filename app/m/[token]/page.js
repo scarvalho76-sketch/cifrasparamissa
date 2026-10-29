@@ -2,14 +2,19 @@
 import { useEffect, useState } from 'react';
 import { useParams } from 'next/navigation';
 import { supabase } from '@/lib/supabase';
-import { dataLonga } from '@/lib/util';
+import { dataLonga, lerPref, gravarPref } from '@/lib/util';
+import CalendarioMusico from '@/components/CalendarioMusico';
 
-// Tela do músico, aberta pelo link pessoal: as próximas missas em que está escalado.
+// Tela do músico, aberta pelo link pessoal, em abas (como no Sonata):
+// Calendário (missas do mês) e Escalas (as próximas missas em que está escalado).
 // O link fica guardado no aparelho, e a lista também (para abrir sem internet).
 export default function TelaMusico() {
   const { token } = useParams();
   const [d, setD] = useState(undefined);
   const [erro, setErro] = useState('');
+  const [aba, setAba] = useState('cal');
+  useEffect(() => { const a = lerPref('missa:musico:aba', 'cal'); if (['cal', 'esc'].includes(a)) setAba(a); }, []);
+  const trocarAba = a => { setAba(a); gravarPref('missa:musico:aba', a); window.scrollTo({ top: 0 }); };
 
   useEffect(() => {
     try { localStorage.setItem('missa:token', token); } catch {}
@@ -44,17 +49,24 @@ export default function TelaMusico() {
         <h1>Olá, {d.nome.split(' ')[0]}!</h1>
         <button className="sec mini" onClick={sair}>Sair</button>
       </div>
-      <p className="mut">Suas próximas missas. Abra uma e toque em “Baixar para usar sem internet” antes de sair de casa.</p>
-      {d.missas.length === 0 && <div className="card mut">Nenhuma missa marcada para você no momento.</div>}
-      {d.missas.map(m => (
-        <a key={m.id} href={'/missa/' + m.id} style={{ textDecoration: 'none', color: 'inherit' }}>
-          <div className="card">
-            <strong>{dataLonga(m.data_hora)}</strong>
-            <div className="mut">{[m.titulo, m.local].filter(Boolean).join(' · ') || 'Missa'}{m.instrumento ? ' · ' + m.instrumento : ''}</div>
-            <div style={{ marginTop: 8, color: 'var(--ouro-escuro)' }}>🎼 Abrir modo celebração ▸</div>
-          </div>
-        </a>
-      ))}
+      <div className="tabs">
+        <button className={aba === 'cal' ? 'on' : ''} onClick={() => trocarAba('cal')}>Calendário</button>
+        <button className={aba === 'esc' ? 'on' : ''} onClick={() => trocarAba('esc')}>Escalas{d.missas.length ? ` (${d.missas.length})` : ''}</button>
+      </div>
+      {aba === 'cal' && <CalendarioMusico missas={[...(d.passadas || []), ...d.missas]} />}
+      {aba === 'esc' && <>
+        <p className="mut">Suas próximas missas. Abra uma e toque em “Baixar para usar sem internet” antes de sair de casa.</p>
+        {d.missas.length === 0 && <div className="card mut">Nenhuma missa marcada para você no momento.</div>}
+        {d.missas.map(m => (
+          <a key={m.id} href={'/missa/' + m.id} style={{ textDecoration: 'none', color: 'inherit' }}>
+            <div className="card">
+              <strong>{dataLonga(m.data_hora)}</strong>
+              <div className="mut">{[m.titulo, m.local].filter(Boolean).join(' · ') || 'Missa'}{m.instrumento ? ' · ' + m.instrumento : ''}</div>
+              <div style={{ marginTop: 8, color: 'var(--ouro-escuro)' }}>🎼 Abrir modo celebração ▸</div>
+            </div>
+          </a>
+        ))}
+      </>}
     </div>
   );
 }
