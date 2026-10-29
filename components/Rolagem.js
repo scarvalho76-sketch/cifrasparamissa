@@ -80,6 +80,30 @@ export default function Rolagem({ alvoId }) {
     };
   }, [rolando, vel, alvoId]);
 
+  // Arrastar o dedo DENTRO do texto (letra, cifra, leitura ou oração) da música aberta não sobe além do início dela:
+  // um arrasto rápido para cima para no começo da música. Arrastando FORA do texto, a página rola livremente.
+  useEffect(() => {
+    let limite = null, solto = 0, soltou = false;
+    const comecou = e => {
+      clearTimeout(solto); soltou = false;
+      const t = e.target;
+      const dentro = t?.closest?.('.cer-ativo pre, .cer-ativo .oe-texto');
+      const card = dentro && document.getElementById(alvoId)?.closest('.cer-mom');
+      if (!card || !card.contains(t)) { limite = null; return; }
+      const topo = card.getBoundingClientRect().top + window.scrollY - 8;
+      limite = window.scrollY >= topo - 40 ? topo : null; // vale enquanto a tela está na música (do início para baixo)
+    };
+    // depois que o dedo sai, o limite continua até o embalo da rolagem parar (sem movimento por um instante)
+    const esperarParar = () => { clearTimeout(solto); solto = setTimeout(() => { limite = null; soltou = false; }, 400); };
+    const rolou = () => { if (limite !== null && window.scrollY < limite) window.scrollTo(0, limite); if (soltou) esperarParar(); };
+    const terminou = () => { soltou = true; esperarParar(); };
+    document.addEventListener('touchstart', comecou, { passive: true });
+    document.addEventListener('touchend', terminou, { passive: true });
+    document.addEventListener('touchcancel', terminou, { passive: true });
+    window.addEventListener('scroll', rolou, { passive: true });
+    return () => { clearTimeout(solto); document.removeEventListener('touchstart', comecou); document.removeEventListener('touchend', terminou); document.removeEventListener('touchcancel', terminou); window.removeEventListener('scroll', rolou); };
+  }, [alvoId]);
+
   // Rolagem por voz: desce enquanto há voz (acima do limiar calibrado) e,
   // quando reconhece palavras da letra, reposiciona a tela na região certa
   useEffect(() => {
@@ -148,12 +172,19 @@ export default function Rolagem({ alvoId }) {
     setRolando(true);
   }
 
+  // Volta ao começo da música aberta (a rolagem automática, se estiver ligada, continua de lá)
+  function irAoInicio() {
+    const card = document.getElementById(alvoId)?.closest('.cer-mom');
+    if (card) window.scrollTo({ top: card.getBoundingClientRect().top + window.scrollY - 8, behavior: 'smooth' });
+  }
+
   return (
     <div ref={barra} className="cer-rolagem" role="group" aria-label="Rolagem automática">
       <button type="button" className={'cer-mini' + (rolando ? '' : ' sec')} onClick={alternar} style={{ minWidth: 92 }}>{rolando ? '⏸ Pausar' : '▶ Rolar'}</button>
       <button type="button" className={'cer-mini' + (voz ? '' : ' sec')} onClick={alternarVoz} title="Rolagem guiada pela voz" aria-pressed={voz}>
         🎤 {voz ? (cantando ? 'Ouvindo ♪' : 'Ouvindo') : 'Voz'}
       </button>
+      <button type="button" className="sec cer-mini" onClick={irAoInicio} title="Voltar ao início desta música" aria-label="Voltar ao início desta música">⤒ Início</button>
       <span className="mut" style={{ fontSize: '.85rem', marginLeft: 'auto' }}>Velocidade</span>
       <button type="button" className="sec cer-mini" onClick={() => mudarVel(-1)} aria-label="Mais devagar" disabled={vel <= 1}>−</button>
       <strong style={{ minWidth: 18, textAlign: 'center' }}>{vel}</strong>
