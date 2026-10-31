@@ -17,9 +17,9 @@ const mono = { fontFamily: 'ui-monospace, SFMono-Regular, Menlo, Consolas, monos
 const vazio = { nome: '', artista: '', tom_original: '', tom_padrao: '', capo: 0, letra: '', cifra: '', grade: '', obs: '', video: '' };
 
 // youtube: abre já com o campo do link em destaque; momentoId: a música nova já fica marcada nesse momento
-export function Editor({ ficha, inicial, onSalvo, onCancelar, existentes, youtube = false, momentoId = null }) {
+export function Editor({ ficha, inicial, onSalvo, onCancelar, existentes, youtube = false, momentoId = null, obsPadrao = '' }) {
   const [f, setF] = useState(() => ({
-    ...vazio, ...(ficha || {}),
+    ...vazio, ...(ficha || {}), ...(!ficha && obsPadrao ? { obs: obsPadrao } : {}),
     ...(inicial ? { nome: inicial.nome || '', artista: inicial.artista || '', cifra: inicial.cifra || '', tom_original: inicial.tom || '', capo: inicial.capo || 0, tom_padrao: inicial.tomReal || '', letra: '', video: inicial.video || '' } : {})
   }));
   const [msg, setMsg] = useState(inicial && !inicial.tom ? 'Não encontrei o tom no arquivo: preencha o tom original.' : '');
