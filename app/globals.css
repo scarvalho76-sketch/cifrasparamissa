@@ -220,3 +220,6 @@ a.botao.sec{background:transparent;color:var(--ouro-escuro)}
 @media (min-width:900px){ .wrap.cer{max-width:1000px} }
 .yt-link{display:inline-block;margin:0 0 10px;padding:5px 12px;border:1px solid var(--line);border-radius:3px;font-size:.9rem;color:var(--ouro-escuro);text-decoration:none;background:var(--card)}
 .yt-link:hover{border-color:var(--ouro)}
+.salmo-dia{margin:0 0 8px;padding:8px 12px;border-left:3px solid var(--ouro);background:var(--fundo);border-radius:0 3px 3px 0}
+.salmo-dia summary{cursor:pointer}
+.salmo-dia .leitura-res{display:block;font-style:italic;margin-top:2px}
