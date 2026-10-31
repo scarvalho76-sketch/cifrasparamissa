@@ -19,7 +19,7 @@ const chave = id => 'evento:' + id;
 const ler = k => { try { return JSON.parse(localStorage.getItem(k) || 'null'); } catch { return null; } };
 const gravar = (k, v) => { try { localStorage.setItem(k, JSON.stringify(v)); } catch {} };
 const meioTom = n => (n > 0 ? '+' : '') + (n / 2).toLocaleString('pt-BR') + ' tom';
-const CAMPOS = 'nome, artista, cifra, letra, grade, tom_original, tom_padrao, capo';
+const CAMPOS = 'nome, artista, cifra, letra, grade, tom_original, tom_padrao, capo, video';
 
 async function guardarPagina() {
   if (!('serviceWorker' in navigator) || !('caches' in window)) throw new Error('Este navegador não permite guardar a página para uso sem internet.');
@@ -242,6 +242,7 @@ export default function ModoEvento() {
             </div>
             {ativo && (
               <div style={{ marginTop: 12 }}>
+                {m.video && <a className="yt-link" href={m.video} target="_blank" rel="noreferrer">▶ Ouvir no YouTube</a>}
                 {mostraCifra && base && (
                   <div className="row" style={{ marginBottom: 8 }}>
                     <span style={{ fontSize: '.9rem' }}>

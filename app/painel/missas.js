@@ -3,7 +3,8 @@ import { useEffect, useMemo, useState } from 'react';
 import { supabase } from '@/lib/supabase';
 import { linkWhatsApp } from '@/lib/whatsapp';
 import { lerTom } from '@/lib/musica';
-import { dataLonga, dataCurta, fmtData, fmtHora, juntarDataHora, TEMPOS, buscarLiturgia, ehAclamacao, tempoDaLiturgia, serveNoTempo } from '@/lib/util';
+import { dataLonga, dataCurta, fmtData, fmtHora, juntarDataHora, TEMPOS, buscarLiturgia, ehAclamacao, tempoDaLiturgia, serveNoTempo, chave } from '@/lib/util';
+import { Editor } from './biblioteca';
 import CampoDataHora from './campoData';
 import LeiturasDoDia from './leituras';
 import { ehConta } from '@/lib/conta';
@@ -114,7 +115,8 @@ function BuscarAntifona({ data, onAchou }) {
   );
 }
 
-function Item({ it, n, total, numero, data, tempo, musicas, porMomento, indicadas, onMudar, onTirar, onDuplicar }) {
+function Item({ it, n, total, numero, data, tempo, musicas, porMomento, indicadas, momentoId, onMudar, onTirar, onDuplicar }) {
+  const [doYoutube, setDoYoutube] = useState(false);
   const m = musicas.find(x => x.id === it.musica_id);
   // Só as músicas marcadas na Biblioteca para este momento
   const doMomento = indicadas[it.momento.toLowerCase()] || new Set();
@@ -152,6 +154,15 @@ function Item({ it, n, total, numero, data, tempo, musicas, porMomento, indicada
       <input key={'o' + it.id + it.obs} defaultValue={it.obs} placeholder={ehAclamacao(it.momento) ? 'Antífona (V.) do dia' : 'Observação (opcional)'} style={{ margin: '0 0 4px' }}
         onBlur={e => e.target.value.trim() !== it.obs && onMudar({ obs: e.target.value.trim() })} />
       {ehAclamacao(it.momento) && <BuscarAntifona data={data} onAchou={v => onMudar({ obs: v })} />}
+      {/^salmo/i.test(it.momento) && !doYoutube && !ehConta() && <div className="row" style={{ justifyContent: 'flex-start', marginBottom: 4 }}>
+        <button className="sec mini" onClick={() => setDoYoutube(true)}>▶ Trazer o salmo de um vídeo do YouTube</button></div>}
+      {doYoutube && <div className="card" style={{ borderLeft: '4px solid var(--ouro)', margin: '6px 0' }}>
+        <strong>▶ Salmo a partir de um vídeo do YouTube</strong>
+        <p className="mut" style={{ fontSize: '.85rem', margin: '4px 0 0' }}>A música é salva na Biblioteca, marcada como {it.momento}, e já fica escolhida nesta missa.</p>
+        <Editor youtube momentoId={momentoId}
+          existentes={Object.fromEntries(musicas.map(x => [chave(x.nome, x.artista), x]))}
+          onSalvo={id => { setDoYoutube(false); if (id) onMudar({ musica_id: id, tom: '' }); }} onCancelar={() => setDoYoutube(false)} />
+      </div>}
       {marcadas.length === 0 && <div className="falta">Nenhuma música marcada para {it.momento}{tempo ? ` que sirva no tempo ${tempo}` : ''}. Marque na aba Biblioteca, nos botões de momento (e de tempo) de cada música.</div>}
       {m && !m.cifra.trim() && <div className="falta">Esta música ainda não tem cifra na Biblioteca.</div>}
       {m && m.cifra.trim() && !m.tom_original && tomEfetivo && <div className="falta">Sem tom original na Biblioteca: a cifra não será transposta.</div>}
@@ -275,6 +286,7 @@ function Detalhe({ id, musicos, musicas, porMomento, indicadas, momentos, onFech
       <div>
         {itens.map((it, n) => (
           <Item key={it.id} it={it} n={n} total={itens.length} data={c.data_hora} tempo={c.tempo} numero={numeroDe[it.momento.toLowerCase()]} musicas={musicas} porMomento={porMomento} indicadas={indicadas}
+            momentoId={momentos.find(m => m.nome.toLowerCase() === it.momento.toLowerCase())?.id}
             onMudar={campos => mudarItem(it, campos)} onTirar={() => tirar(it)} onDuplicar={() => inserir(it.momento, n)} />
         ))}
       </div>

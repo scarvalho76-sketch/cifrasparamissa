@@ -4,6 +4,7 @@ import { supabase } from '@/lib/supabase';
 import { gerarGrade, lerTom, letraDaCifra, nomeDoTom } from '@/lib/musica';
 import { lerPdfDeCifra } from '@/lib/pdfCifra';
 import { lerTxtDeCifra } from '@/lib/txtCifra';
+import { lerVideoDoYoutube, linkDoVideo } from '@/lib/youtube';
 const ehTxt = arq => /\.txt$/i.test(arq.name) || arq.type === 'text/plain';
 const lerArquivo = arq => (ehTxt(arq) ? lerTxtDeCifra(arq) : lerPdfDeCifra(arq));
 import { chave, simples, dataCurta, TEMPOS_ESPECIFICOS, nomeTempo } from '@/lib/util';
@@ -13,15 +14,17 @@ import Paginacao, { paginar } from '@/components/Paginacao';
 // Biblioteca de letras e cifras das missas: uma ficha por música (nome + artista).
 // Mesma lógica do Sonata Casamentos: cifra única, letra tirada da cifra, transposição pelo tom original.
 const mono = { fontFamily: 'ui-monospace, SFMono-Regular, Menlo, Consolas, monospace', fontSize: '.9rem', lineHeight: 1.45, whiteSpace: 'pre', overflowX: 'auto' };
-const vazio = { nome: '', artista: '', tom_original: '', tom_padrao: '', capo: 0, letra: '', cifra: '', grade: '', obs: '' };
+const vazio = { nome: '', artista: '', tom_original: '', tom_padrao: '', capo: 0, letra: '', cifra: '', grade: '', obs: '', video: '' };
 
-function Editor({ ficha, inicial, onSalvo, onCancelar, existentes }) {
+// youtube: abre já com o campo do link em destaque; momentoId: a música nova já fica marcada nesse momento
+export function Editor({ ficha, inicial, onSalvo, onCancelar, existentes, youtube = false, momentoId = null }) {
   const [f, setF] = useState(() => ({
     ...vazio, ...(ficha || {}),
-    ...(inicial ? { nome: inicial.nome || '', artista: inicial.artista || '', cifra: inicial.cifra || '', tom_original: inicial.tom || '', capo: inicial.capo || 0, tom_padrao: inicial.tomReal || '', letra: '' } : {})
+    ...(inicial ? { nome: inicial.nome || '', artista: inicial.artista || '', cifra: inicial.cifra || '', tom_original: inicial.tom || '', capo: inicial.capo || 0, tom_padrao: inicial.tomReal || '', letra: '', video: inicial.video || '' } : {})
   }));
   const [msg, setMsg] = useState(inicial && !inicial.tom ? 'Não encontrei o tom no arquivo: preencha o tom original.' : '');
   const [lendo, setLendo] = useState(false);
+  const [okYt, setOkYt] = useState('');
   const set = k => e => setF({ ...f, [k]: e.target.value });
   const tomInvalido = t => t.trim() && !lerTom(t);
 
@@ -39,6 +42,28 @@ function Editor({ ficha, inicial, onSalvo, onCancelar, existentes }) {
     setLendo(false);
   }
 
+  // Lê a descrição do vídeo e traz a cifra que estiver lá (para revisar antes de salvar)
+  async function buscarNoYoutube() {
+    setMsg(''); setOkYt('');
+    if (!f.video.trim()) return setMsg('Cole o link do vídeo do YouTube.');
+    setLendo('youtube');
+    try {
+      const r = await lerVideoDoYoutube(f.video);
+      const novo = { ...f, video: r.video, nome: f.nome || r.nome, artista: f.artista || r.artista };
+      if (r.achou) {
+        if (!f.cifra.trim() || confirm('Substituir a cifra atual pela da descrição do vídeo?')) {
+          Object.assign(novo, { cifra: r.cifra, letra: '', tom_original: r.tom || f.tom_original, ...(r.capo ? { capo: r.capo } : {}) });
+          setOkYt('✓ Cifra trazida da descrição do vídeo. Confira se os acordes estão em cima das sílabas certas.' + (r.tom ? '' : ' Não encontrei o tom: preencha o tom original.'));
+        }
+      } else {
+        if (!f.cifra.trim() && r.descricao.trim()) novo.cifra = r.descricao.trim();
+        setMsg(r.descricao.trim() ? 'Não encontrei acordes na descrição do vídeo.' + (!f.cifra.trim() ? ' Coloquei a descrição inteira na caixa da cifra: aproveite o que servir.' : '') : 'Este vídeo não tem descrição.');
+      }
+      setF(novo);
+    } catch (err) { setMsg(err.message); }
+    setLendo(false);
+  }
+
   async function salvar() {
     setMsg('');
     if (!f.nome.trim()) return setMsg('Informe o nome da música.');
@@ -48,14 +73,17 @@ function Editor({ ficha, inicial, onSalvo, onCancelar, existentes }) {
     const dados = {
       nome: f.nome.trim(), artista: f.artista.trim(), tom_original: f.tom_original.trim(), tom_padrao: f.tom_padrao.trim(), capo: Number(f.capo) || 0,
       letra: f.letra.replace(/\s+$/, ''), cifra: f.cifra.replace(/\s+$/, ''), grade: f.grade.replace(/\s+$/, ''), obs: f.obs.trim(),
+      video: linkDoVideo(f.video) || f.video.trim(),
       atualizado_em: new Date().toISOString()
     };
     const alvo = f.id || outra?.id;
-    const { error } = alvo
-      ? await supabase.from('missa_musicas').update(dados).eq('id', alvo)
-      : await supabase.from('missa_musicas').insert(dados);
+    const { data: gravada, error } = alvo
+      ? await supabase.from('missa_musicas').update(dados).eq('id', alvo).select('id').single()
+      : await supabase.from('missa_musicas').insert(dados).select('id').single();
     if (error) return setMsg('Não foi possível salvar: ' + error.message);
-    onSalvo();
+    const id = gravada?.id || alvo;
+    if (momentoId && id) await supabase.from('missa_musicas_momentos').upsert({ musica_id: id, momento_id: momentoId }, { onConflict: 'musica_id,momento_id', ignoreDuplicates: true });
+    onSalvo(id);
   }
 
   async function excluir() {
@@ -65,8 +93,21 @@ function Editor({ ficha, inicial, onSalvo, onCancelar, existentes }) {
     onSalvo();
   }
 
+  const linhaYoutube = (
+    <div style={{ marginBottom: 12, ...(youtube ? { padding: 10, border: '1px solid var(--ouro)', borderRadius: 4, background: 'var(--fundo)' } : {}) }}>
+      <label style={{ marginTop: 0 }}>Vídeo no YouTube (opcional): a cifra pode vir da descrição</label>
+      <div className="row" style={{ gap: 6, flexWrap: 'nowrap' }}>
+        <input value={f.video} onChange={set('video')} placeholder="Cole aqui o link do vídeo" inputMode="url" autoFocus={youtube} style={{ margin: 0, flex: 1, minWidth: 0 }}
+          onKeyDown={e => { if (e.key === 'Enter') { e.preventDefault(); buscarNoYoutube(); } }} />
+        <button type="button" className="sec" onClick={buscarNoYoutube} disabled={lendo === 'youtube'} style={{ whiteSpace: 'nowrap' }}>{lendo === 'youtube' ? 'Lendo…' : '▶ Buscar cifra'}</button>
+      </div>
+      {okYt && <p className="okmsg" style={{ margin: '6px 0 0' }}>{okYt}</p>}
+    </div>
+  );
+
   return (
     <div style={{ marginTop: 10 }}>
+      {youtube && linhaYoutube}
       <div className="grade2">
         <div><label>Nome da música</label><input value={f.nome} onChange={set('nome')} /></div>
         <div><label>Cantor / autor (opcional)</label><input value={f.artista} onChange={set('artista')} /></div>
@@ -81,6 +122,7 @@ function Editor({ ficha, inicial, onSalvo, onCancelar, existentes }) {
           <input type="file" accept=".txt,text/plain" onChange={importar} style={{ display: 'none' }} />
         </label>
       </div>
+      {!youtube && linhaYoutube}
       <label>Cifra: acordes em cima da letra, como no Cifra Club</label>
       <textarea rows={14} value={f.cifra} onChange={set('cifra')} placeholder="Cole aqui a cifra" style={mono} spellCheck={false} />
       <div className="grade2">
@@ -228,6 +270,7 @@ export default function Biblioteca() {
             {lendo ? 'Lendo…' : '📝 Importar textos'}
             <input type="file" accept=".txt,text/plain" multiple onChange={importarVarios} style={{ display: 'none' }} />
           </label>
+          <button className="sec" onClick={() => setAberto(aberto === 'youtube' ? null : 'youtube')}>{aberto === 'youtube' ? 'Fechar' : '▶ Do YouTube'}</button>
           <button className="sec" onClick={() => setAberto(aberto === 'novo' ? null : 'novo')}>{aberto === 'novo' ? 'Fechar' : '+ Música'}</button>
         </span>}
       </div>
@@ -241,6 +284,8 @@ export default function Biblioteca() {
         </div>
       ))}
       {aberto === 'novo' && <div className="card"><Editor existentes={existentes} onSalvo={() => { setAberto(null); carregar(); }} onCancelar={() => setAberto(null)} /></div>}
+      {aberto === 'youtube' && <div className="card" style={{ borderLeft: '4px solid var(--ouro)' }}><strong>▶ Música a partir de um vídeo do YouTube</strong>
+        <Editor youtube existentes={existentes} onSalvo={() => { setAberto(null); carregar(); }} onCancelar={() => setAberto(null)} /></div>}
       <div className="tabs" style={{ marginTop: 0 }}>
         <button className={filtro === 'todas' ? 'on' : ''} onClick={() => setFiltro('todas')}>Todas</button>
         <button className={filtro === 'proximas' ? 'on' : ''} onClick={() => setFiltro('proximas')}>Nas próximas missas</button>
