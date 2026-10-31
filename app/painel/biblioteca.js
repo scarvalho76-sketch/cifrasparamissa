@@ -46,7 +46,16 @@ export function Editor({ ficha, inicial, onSalvo, onCancelar, existentes, youtub
   // Lê a descrição do vídeo e traz a cifra que estiver lá (para revisar antes de salvar)
   async function buscarNoYoutube() {
     setMsg(''); setOkYt('');
-    if (!f.video.trim()) return setMsg('Cole o link do vídeo do YouTube.');
+    if (!f.video.trim()) {
+      // no Salmo da missa, sem link: abre a busca do YouTube pelo salmo do dia
+      if (salmo) {
+        const num = (String(salmo.referencia || '').match(/\d+/) || [''])[0];
+        const busca = [num ? 'Salmo ' + num : 'Salmo', salmo.refrao || ''].join(' ').replace(/[!?.,;:]+/g, ' ').replace(/\s+/g, ' ').trim();
+        window.open('https://www.youtube.com/results?search_query=' + encodeURIComponent(busca), '_blank', 'noopener');
+        return setOkYt('Abri o YouTube com a busca pelo salmo do dia. Escolha o vídeo, copie o link e cole aqui.');
+      }
+      return setMsg('Cole o link do vídeo do YouTube.');
+    }
     setLendo('youtube');
     try {
       const r = await lerVideoDoYoutube(f.video);
@@ -100,7 +109,7 @@ export function Editor({ ficha, inicial, onSalvo, onCancelar, existentes, youtub
       <div className="row" style={{ gap: 6, flexWrap: 'nowrap' }}>
         <input value={f.video} onChange={set('video')} placeholder="Cole aqui o link do vídeo" inputMode="url" autoFocus={youtube} style={{ margin: 0, flex: 1, minWidth: 0 }}
           onKeyDown={e => { if (e.key === 'Enter') { e.preventDefault(); buscarNoYoutube(); } }} />
-        <button type="button" className="sec" onClick={buscarNoYoutube} disabled={lendo === 'youtube'} style={{ whiteSpace: 'nowrap' }}>{lendo === 'youtube' ? 'Lendo…' : '▶ Buscar cifra'}</button>
+        <button type="button" className="sec" onClick={buscarNoYoutube} disabled={lendo === 'youtube'} style={{ whiteSpace: 'nowrap' }}>{lendo === 'youtube' ? 'Lendo…' : salmo && !f.video.trim() ? '▶ Procurar no YouTube' : '▶ Buscar cifra'}</button>
       </div>
       {okYt && <p className="okmsg" style={{ margin: '6px 0 0' }}>{okYt}</p>}
     </div>
