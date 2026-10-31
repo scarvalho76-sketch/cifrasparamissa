@@ -6,6 +6,7 @@ import { lerTom } from '@/lib/musica';
 import { dataLonga, dataCurta, fmtData, fmtHora, juntarDataHora, TEMPOS, buscarLiturgia, ehAclamacao, tempoDaLiturgia, serveNoTempo, chave } from '@/lib/util';
 import { Editor } from './biblioteca';
 import { melodiasDoSalmo, obsDoSalmo } from '@/lib/salmo';
+import ConferirSalmo from '@/components/ConferirSalmo';
 import CampoDataHora from './campoData';
 import LeiturasDoDia from './leituras';
 import { ehConta } from '@/lib/conta';
@@ -168,12 +169,13 @@ function Item({ it, n, total, numero, data, tempo, musicas, porMomento, indicada
         </span>
         <button className="sec mini" onClick={() => setTodosSalmos(v => !v)}>{todosSalmos ? 'Só o salmo de hoje' : 'Ver todos os salmos'}</button>
       </div>}
+      {ehSalmo && salmoDia && m?.cifra?.trim() && <div style={{ marginBottom: 6 }}><ConferirSalmo cifra={m.cifra} salmo={salmoDia} /></div>}
       {ehSalmo && !doYoutube && !ehConta() && <div className="row" style={{ justifyContent: 'flex-start', marginBottom: 4 }}>
         <button className="sec mini" onClick={() => setDoYoutube(true)}>▶ Trazer o salmo de um vídeo do YouTube</button></div>}
       {doYoutube && <div className="card" style={{ borderLeft: '4px solid var(--ouro)', margin: '6px 0' }}>
         <strong>▶ Salmo a partir de um vídeo do YouTube</strong>
         <p className="mut" style={{ fontSize: '.85rem', margin: '4px 0 0' }}>A música é salva na Biblioteca, marcada como {it.momento}, e já fica escolhida nesta missa.</p>
-        <Editor youtube momentoId={momentoId} obsPadrao={obsDoSalmo(salmoDia)}
+        <Editor youtube momentoId={momentoId} obsPadrao={obsDoSalmo(salmoDia)} salmo={salmoDia}
           existentes={Object.fromEntries(musicas.map(x => [chave(x.nome, x.artista), x]))}
           onSalvo={id => { setDoYoutube(false); if (id) onMudar({ musica_id: id, tom: '' }); }} onCancelar={() => setDoYoutube(false)} />
       </div>}

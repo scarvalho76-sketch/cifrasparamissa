@@ -5,6 +5,7 @@ import { gerarGrade, lerTom, letraDaCifra, nomeDoTom } from '@/lib/musica';
 import { lerPdfDeCifra } from '@/lib/pdfCifra';
 import { lerTxtDeCifra } from '@/lib/txtCifra';
 import { lerVideoDoYoutube, linkDoVideo } from '@/lib/youtube';
+import ConferirSalmo from '@/components/ConferirSalmo';
 const ehTxt = arq => /\.txt$/i.test(arq.name) || arq.type === 'text/plain';
 const lerArquivo = arq => (ehTxt(arq) ? lerTxtDeCifra(arq) : lerPdfDeCifra(arq));
 import { chave, simples, dataCurta, TEMPOS_ESPECIFICOS, nomeTempo } from '@/lib/util';
@@ -17,7 +18,7 @@ const mono = { fontFamily: 'ui-monospace, SFMono-Regular, Menlo, Consolas, monos
 const vazio = { nome: '', artista: '', tom_original: '', tom_padrao: '', capo: 0, letra: '', cifra: '', grade: '', obs: '', video: '' };
 
 // youtube: abre já com o campo do link em destaque; momentoId: a música nova já fica marcada nesse momento
-export function Editor({ ficha, inicial, onSalvo, onCancelar, existentes, youtube = false, momentoId = null, obsPadrao = '' }) {
+export function Editor({ ficha, inicial, onSalvo, onCancelar, existentes, youtube = false, momentoId = null, obsPadrao = '', salmo = null }) {
   const [f, setF] = useState(() => ({
     ...vazio, ...(ficha || {}), ...(!ficha && obsPadrao ? { obs: obsPadrao } : {}),
     ...(inicial ? { nome: inicial.nome || '', artista: inicial.artista || '', cifra: inicial.cifra || '', tom_original: inicial.tom || '', capo: inicial.capo || 0, tom_padrao: inicial.tomReal || '', letra: '', video: inicial.video || '' } : {})
@@ -125,6 +126,7 @@ export function Editor({ ficha, inicial, onSalvo, onCancelar, existentes, youtub
       {!youtube && linhaYoutube}
       <label>Cifra: acordes em cima da letra, como no Cifra Club</label>
       <textarea rows={14} value={f.cifra} onChange={set('cifra')} placeholder="Cole aqui a cifra" style={mono} spellCheck={false} />
+      {salmo && f.cifra.trim() && <div style={{ margin: '-4px 0 12px' }}><ConferirSalmo cifra={f.cifra} letra={f.letra} salmo={salmo} aberto /></div>}
       <div className="grade2">
         <div>
           <label>Tom em que a cifra foi escrita</label>

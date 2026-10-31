@@ -220,3 +220,10 @@ a.botao.sec{background:transparent;color:var(--ouro-escuro)}
 @media (min-width:900px){ .wrap.cer{max-width:1000px} }
 .yt-link{display:inline-block;margin:0 0 10px;padding:5px 12px;border:1px solid var(--line);border-radius:3px;font-size:.9rem;color:var(--ouro-escuro);text-decoration:none;background:var(--card)}
 .yt-link:hover{border-color:var(--ouro)}
+.conferir-salmo{padding:8px 12px;border:1px solid var(--line);border-radius:3px;background:var(--fundo)}
+.conferir-salmo summary{cursor:pointer}
+.conferir-lista{margin-top:8px;line-height:1.55}
+.conferir-lista > div{padding:1px 0}
+.conferir-erro{color:var(--bad)}
+.conferir-lista > div.conferir-erro{font-weight:600}
+.conferir-cnbb{display:block;font-weight:400;font-size:.85rem;color:var(--mut);margin:0 0 4px 12px}
