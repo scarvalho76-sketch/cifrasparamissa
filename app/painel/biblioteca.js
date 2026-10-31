@@ -162,7 +162,7 @@ export function Editor({ ficha, inicial, onSalvo, onCancelar, existentes, youtub
       <textarea rows={6} value={f.grade} onChange={set('grade')} placeholder={'[Refrão]\n| G | D/F# | Em | C |'} style={mono} spellCheck={false} />
       <label>Observações (ex.: “boa para Comunhão”, “refrão 2x no final”)</label>
       <input value={f.obs} onChange={set('obs')} />
-      {msg && <p className="err">{msg}</p>}
+      {msg && <p className="err" style={{ whiteSpace: 'pre-line' }}>{msg}</p>}
       <div className="row">
         <span className="row" style={{ justifyContent: 'flex-start' }}>
           <button onClick={salvar}>Salvar</button>
