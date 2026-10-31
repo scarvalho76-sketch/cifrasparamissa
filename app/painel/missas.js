@@ -115,7 +115,7 @@ function BuscarAntifona({ data, onAchou }) {
   );
 }
 
-function Item({ it, n, total, numero, data, tempo, musicas, porMomento, indicadas, momentoId, salmoDia, onMudar, onTirar, onDuplicar }) {
+function Item({ it, n, total, numero, data, tempo, musicas, porMomento, indicadas, momentoId, onMudar, onTirar, onDuplicar }) {
   const [doYoutube, setDoYoutube] = useState(false);
   const m = musicas.find(x => x.id === it.musica_id);
   // Só as músicas marcadas na Biblioteca para este momento
@@ -154,14 +154,6 @@ function Item({ it, n, total, numero, data, tempo, musicas, porMomento, indicada
       <input key={'o' + it.id + it.obs} defaultValue={it.obs} placeholder={ehAclamacao(it.momento) ? 'Antífona (V.) do dia' : 'Observação (opcional)'} style={{ margin: '0 0 4px' }}
         onBlur={e => e.target.value.trim() !== it.obs && onMudar({ obs: e.target.value.trim() })} />
       {ehAclamacao(it.momento) && <BuscarAntifona data={data} onAchou={v => onMudar({ obs: v })} />}
-      {/^salmo/i.test(it.momento) && salmoDia && (
-        <details className="salmo-dia">
-          <summary><strong>Salmo do dia</strong> <span className="mut">{salmoDia.referencia}</span>
-            {salmoDia.refrao && <span className="leitura-res"><strong>R.</strong> {salmoDia.refrao}</span>}</summary>
-          <div style={{ whiteSpace: 'pre-wrap', lineHeight: 1.55, marginTop: 6 }}>{salmoDia.texto}</div>
-          <p className="mut" style={{ fontSize: '.8rem', margin: '6px 0 0' }}>Fonte: Liturgia Diária · Edições CNBB</p>
-        </details>
-      )}
       {/^salmo/i.test(it.momento) && !doYoutube && !ehConta() && <div className="row" style={{ justifyContent: 'flex-start', marginBottom: 4 }}>
         <button className="sec mini" onClick={() => setDoYoutube(true)}>▶ Trazer o salmo de um vídeo do YouTube</button></div>}
       {doYoutube && <div className="card" style={{ borderLeft: '4px solid var(--ouro)', margin: '6px 0' }}>
@@ -187,7 +179,6 @@ function Detalhe({ id, musicos, musicas, porMomento, indicadas, momentos, onFech
   const [editando, setEditando] = useState(false);
   const [f, setF] = useState({});
   const [novoMom, setNovoMom] = useState('');
-  const [salmoDia, setSalmoDia] = useState(null); // Salmo responsorial do dia (CNBB)
 
   const carregar = async () => {
     const [a, b, e] = await Promise.all([
@@ -288,14 +279,14 @@ function Detalhe({ id, musicos, musicas, porMomento, indicadas, momentos, onFech
       )}
 
       <h2 style={{ marginTop: 20 }}>Leituras do dia</h2>
-      <LeiturasDoDia data={c.data_hora} onCarregou={l => setSalmoDia(l?.salmo || null)} />
+      <LeiturasDoDia data={c.data_hora} />
 
       <h2 style={{ marginTop: 20 }}>Músicas {semMusica > 0 && <span className="falta" style={{ fontFamily: 'inherit', fontSize: '.85rem' }}>· {semMusica} sem música</span>}</h2>
       {musicas.length === 0 && <p className="mut">A Biblioteca ainda está vazia: cadastre as músicas na aba Biblioteca para escolher aqui.</p>}
       <div>
         {itens.map((it, n) => (
           <Item key={it.id} it={it} n={n} total={itens.length} data={c.data_hora} tempo={c.tempo} numero={numeroDe[it.momento.toLowerCase()]} musicas={musicas} porMomento={porMomento} indicadas={indicadas}
-            momentoId={momentos.find(m => m.nome.toLowerCase() === it.momento.toLowerCase())?.id} salmoDia={salmoDia}
+            momentoId={momentos.find(m => m.nome.toLowerCase() === it.momento.toLowerCase())?.id}
             onMudar={campos => mudarItem(it, campos)} onTirar={() => tirar(it)} onDuplicar={() => inserir(it.momento, n)} />
         ))}
       </div>
