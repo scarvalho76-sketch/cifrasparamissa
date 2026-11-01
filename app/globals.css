@@ -227,3 +227,4 @@ a.botao.sec{background:transparent;color:var(--ouro-escuro)}
 .conferir-erro{color:var(--bad)}
 .conferir-lista > div.conferir-erro{font-weight:600}
 .conferir-cnbb{display:block;font-weight:400;font-size:.85rem;color:var(--mut);margin:0 0 4px 12px}
+.aviso-coracao{margin:10px 0 12px;padding:8px 12px;border-left:3px solid var(--vermelho);background:rgba(184,64,44,.08);border-radius:0 3px 3px 0}

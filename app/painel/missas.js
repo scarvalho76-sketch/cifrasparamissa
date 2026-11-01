@@ -3,7 +3,7 @@ import { useEffect, useMemo, useState } from 'react';
 import { supabase } from '@/lib/supabase';
 import { linkWhatsApp } from '@/lib/whatsapp';
 import { lerTom } from '@/lib/musica';
-import { dataLonga, dataCurta, fmtData, fmtHora, juntarDataHora, TEMPOS, buscarLiturgia, ehAclamacao, tempoDaLiturgia, serveNoTempo, chave } from '@/lib/util';
+import { dataLonga, dataCurta, fmtData, fmtHora, juntarDataHora, TEMPOS, buscarLiturgia, ehAclamacao, tempoDaLiturgia, serveNoTempo, chave, ehPrimeiraSexta, simples } from '@/lib/util';
 import { Editor } from './biblioteca';
 import { melodiasDoSalmo, obsDoSalmo } from '@/lib/salmo';
 import ConferirSalmo from '@/components/ConferirSalmo';
@@ -20,7 +20,22 @@ async function renumerar(itens) {
   await Promise.all(itens.map((it, i) => it.ordem === (i + 1) * 10 ? null : supabase.from('missa_itens').update({ ordem: (i + 1) * 10 }).eq('id', it.id)));
 }
 
-function NovaMissa({ anteriores, onCriada, onCancelar, dataInicial }) {
+// Lembrete: missa na primeira sexta-feira do mês, dedicada ao Sagrado Coração de Jesus
+function AvisoPrimeiraSexta({ data, musicas = [] }) {
+  if (!ehPrimeiraSexta(data)) return null;
+  const doCoracao = musicas.filter(m => /coracao/.test(simples(m.nome + ' ' + (m.obs || ''))));
+  return (
+    <div className="aviso-coracao">
+      <strong>❤️ Primeira sexta-feira do mês</strong> · devoção ao Sagrado Coração de Jesus. Lembre-se das músicas ao Sagrado Coração.
+      <div className="mut" style={{ fontSize: '.85rem', marginTop: 4 }}>
+        {doCoracao.length ? <>Na Biblioteca: {doCoracao.slice(0, 8).map(m => m.nome).join(' · ')}{doCoracao.length > 8 ? ` e mais ${doCoracao.length - 8}` : ''}</>
+          : 'Ainda não há na Biblioteca música com “Coração” no nome.'}
+      </div>
+    </div>
+  );
+}
+
+function NovaMissa({ anteriores, onCriada, onCancelar, dataInicial, musicas }) {
   const ultimo = anteriores[0];
   const [f, setF] = useState({ data: dataInicial || '', hora: '', titulo: '', local: ultimo?.local || '', tempo: 'Tempo Comum', obs: '', base: '' });
   const [msg, setMsg] = useState('');
@@ -82,6 +97,7 @@ function NovaMissa({ anteriores, onCriada, onCancelar, dataInicial }) {
       </div>
       {buscando && <p className="mut" style={{ marginTop: -6 }}>Consultando a Liturgia Diária…</p>}
       {lit && <p className="okmsg" style={{ marginTop: -6 }}>Liturgia Diária: {lit.celebracao}{lit.cor ? ` · cor ${lit.cor}` : ''}{lit.aclamacao?.verso ? ' · antífona da Aclamação encontrada' : ''}</p>}
+      <AvisoPrimeiraSexta data={juntarDataHora(f.data, f.hora || '12:00')} musicas={musicas} />
       {lit === false && <p className="mut" style={{ marginTop: -6 }}>Não foi possível consultar a Liturgia Diária deste dia; preencha à mão.</p>}
       {(lit?.leituras?.length > 0 || lit?.salmo) && <div style={{ margin: '0 0 12px' }}><LeiturasDoDia leituras={lit.leituras} salmo={lit.salmo} /></div>}
       <label>Começar com</label>
@@ -277,6 +293,7 @@ function Detalhe({ id, musicos, musicas, porMomento, indicadas, momentos, onFech
           <h1 style={{ marginTop: 2 }}>{c.titulo || 'Missa'}</h1>
           <div className="mut">{[c.local, c.tempo].filter(Boolean).join(' · ')}</div>
           {c.obs && <p style={{ margin: '6px 0 0' }}>{c.obs}</p>}
+          <AvisoPrimeiraSexta data={c.data_hora} musicas={musicas} />
           <div className="row" style={{ justifyContent: 'flex-start', gap: 6, marginTop: 8 }}>
             <button className="sec mini" onClick={() => { setF({ ...c, data: fmtData(c.data_hora), hora: fmtHora(c.data_hora) }); setEditando(true); }}>Editar dados</button>
             <ConviteBotao missaId={id} dataHora={c.data_hora} titulo={c.titulo} />
@@ -422,7 +439,7 @@ export default function Missas({ alvo }) {
         <h2 style={{ margin: 0 }}>Próximas missas</h2>
         {!nova && <button onClick={() => setNova(true)}>+ Nova missa</button>}
       </div>
-      {nova && <NovaMissa key={dataNova} dataInicial={dataNova} anteriores={[...lista].reverse()} onCancelar={() => { setNova(false); setDataNova(''); }} onCriada={id => { setNova(false); carregar(); setAberta(id); }} />}
+      {nova && <NovaMissa key={dataNova} dataInicial={dataNova} musicas={musicas} anteriores={[...lista].reverse()} onCancelar={() => { setNova(false); setDataNova(''); }} onCriada={id => { setNova(false); carregar(); setAberta(id); }} />}
       {proximas.length === 0 && !nova && <div className="card mut">Nenhuma missa marcada. Toque em “+ Nova missa”.</div>}
       {proximas.map(cartao)}
       {anteriores.length > 0 && (
