@@ -1,7 +1,8 @@
 'use client';
 import { useEffect, useMemo, useState } from 'react';
 import { supabase } from '@/lib/supabase';
-import { fmtHora, fmtData, ehPrimeiraSexta } from '@/lib/util';
+import { fmtHora, fmtData } from '@/lib/util';
+import { lembretesDoDia } from '@/lib/lembretes';
 import { lerPref, gravarPref } from '@/lib/util';
 
 // Calendário das missas cadastradas (como o do sistema do palco):
@@ -72,7 +73,7 @@ export default function Calendario({ onAbrir, onNova, onAbrirEvento, onNovoEvent
       <button type="button" className={'cal-missa cal-' + (COR[x.tempo] || 'verde')} onClick={() => onAbrir(x.id)} title="Abrir a missa">
         <span className="cal-hora">{fmtHora(x.data_hora)}</span> <span className="cal-tit">{x.titulo || 'Missa'}</span>
         {x.local && <span className="cal-local">{x.local}</span>}
-        {ehPrimeiraSexta(x.data_hora) && <span className="cal-local">❤️ Sagrado Coração (1ª sexta)</span>}
+        {lembretesDoDia(x.data_hora).map(l => <span key={l.curto} className="cal-local">{l.icone} {l.curto}</span>)}
         {r.total > 0 && <span className={'cal-status' + (r.faltam ? ' falta' : '')}>{r.faltam ? `${r.faltam} sem música` : '✓ completa'}</span>}
       </button>
     );
