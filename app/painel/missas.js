@@ -1,10 +1,10 @@
 'use client';
-import { useEffect, useMemo, useState } from 'react';
+import { useEffect, useMemo, useRef, useState } from 'react';
 import { supabase } from '@/lib/supabase';
 import { linkWhatsApp } from '@/lib/whatsapp';
 import { lerTom } from '@/lib/musica';
 import { dataLonga, dataCurta, fmtData, fmtHora, juntarDataHora, TEMPOS, buscarLiturgia, ehAclamacao, tempoDaLiturgia, serveNoTempo, chave } from '@/lib/util';
-import { lembretesDoDia, musicasDoLembrete } from '@/lib/lembretes';
+import { lembretesDoDia, musicasDoLembrete, ehMissaEspecial, missasParecidas } from '@/lib/lembretes';
 import { Editor } from './biblioteca';
 import { melodiasDoSalmo, obsDoSalmo } from '@/lib/salmo';
 import ConferirSalmo from '@/components/ConferirSalmo';
@@ -42,8 +42,17 @@ function NovaMissa({ anteriores, onCriada, onCancelar, dataInicial, musicas }) {
   const [f, setF] = useState({ data: dataInicial || '', hora: '', titulo: '', local: ultimo?.local || '', tempo: 'Tempo Comum', obs: '', base: '' });
   const [msg, setMsg] = useState('');
   const [lit, setLit] = useState(null); // liturgia do dia (CNBB)
+  const autoTitulo = useRef('');
   const [buscando, setBuscando] = useState(false);
   const set = k => e => setF({ ...f, [k]: e.target.value });
+  const [verTodas, setVerTodas] = useState(false);
+  // Copiar músicas de outra missa só nas missas específicas (solenidades, festas, Fiéis Defuntos, dias de santos),
+  // e só das anteriores da mesma celebração (com opção de ver todas)
+  const diaNova = juntarDataHora(f.data, f.hora || '12:00');
+  const especial = !!diaNova && ehMissaEspecial({ data: diaNova, titulo: f.titulo, tempo: f.tempo, celebracao: lit?.celebracao || '' });
+  const parecidas = especial ? missasParecidas(anteriores, { data: diaNova, titulo: f.titulo || lit?.celebracao || '' }) : [];
+  const opcoesCopia = verTodas ? anteriores.slice(0, 30) : parecidas.slice(0, 30);
+  useEffect(() => { if (!especial && f.base) setF(x => ({ ...x, base: '' })); }, [especial]);
 
   // Ao completar a data, consulta a Liturgia Diária e sugere celebração e tempo litúrgico
   useEffect(() => {
@@ -53,7 +62,9 @@ function NovaMissa({ anteriores, onCriada, onCancelar, dataInicial, musicas }) {
     let vivo = true; setBuscando(true);
     buscarLiturgia(dia, true).then(l => {
       if (!vivo) return; setBuscando(false); setLit(l || false);
-      if (l) setF(x => ({ ...x, titulo: x.titulo || l.celebracao, tempo: tempoDaLiturgia(l) || x.tempo }));
+      // o nome da celebração preenchido automaticamente acompanha a troca de data (o digitado à mão fica)
+      const auto = autoTitulo.current; autoTitulo.current = l?.celebracao || '';
+      setF(x => ({ ...x, titulo: !x.titulo || x.titulo === auto ? (l?.celebracao || '') : x.titulo, tempo: (l && tempoDaLiturgia(l)) || x.tempo }));
     });
     return () => { vivo = false; };
   }, [f.data]);
@@ -102,11 +113,17 @@ function NovaMissa({ anteriores, onCriada, onCancelar, dataInicial, musicas }) {
       <AvisosDoDia data={juntarDataHora(f.data, f.hora || '12:00')} musicas={musicas} />
       {lit === false && <p className="mut" style={{ marginTop: -6 }}>Não foi possível consultar a Liturgia Diária deste dia; preencha à mão.</p>}
       {(lit?.leituras?.length > 0 || lit?.salmo) && <div style={{ margin: '0 0 12px' }}><LeiturasDoDia leituras={lit.leituras} salmo={lit.salmo} /></div>}
-      <label>Começar com</label>
-      <select value={f.base} onChange={set('base')} style={{ width: '100%' }}>
-        <option value="">Os momentos automáticos (aba Momentos)</option>
-        {anteriores.slice(0, 30).map(a => <option key={a.id} value={a.id}>Copiar músicas de: {dataCurta(a.data_hora)}{a.titulo ? ' · ' + a.titulo : ''}{a.local ? ' · ' + a.local : ''}</option>)}
-      </select>
+      {especial && <>
+        <label>Começar com</label>
+        <select value={f.base} onChange={set('base')} style={{ width: '100%' }}>
+          <option value="">Os momentos automáticos (aba Momentos)</option>
+          {opcoesCopia.map(a => <option key={a.id} value={a.id}>Copiar músicas de: {dataCurta(a.data_hora)}{a.titulo ? ' · ' + a.titulo : ''}{a.local ? ' · ' + a.local : ''}</option>)}
+        </select>
+        <p className="mut" style={{ marginTop: -6, fontSize: '.85rem' }}>
+          {verTodas ? 'Mostrando todas as missas anteriores. ' : parecidas.length ? `${parecidas.length === 1 ? 'Missa anterior' : 'Missas anteriores'} desta mesma celebração. ` : 'Ainda não há missa anterior desta celebração para copiar. '}
+          <button type="button" className="sec mini" onClick={() => setVerTodas(v => !v)}>{verTodas ? 'Só desta celebração' : 'Ver todas'}</button>
+        </p>
+      </>}
       {!f.base && SEM_GLORIA.includes(f.tempo) && <p className="mut" style={{ marginTop: -6 }}>No {f.tempo} o Glória não entra automaticamente (dá para acrescentar depois).</p>}
       <label>Observações</label><input value={f.obs} onChange={set('obs')} />
       {msg && <p className="err">{msg}</p>}
