@@ -3,7 +3,7 @@ import { useEffect, useState } from 'react';
 import { supabase } from '@/lib/supabase';
 import TextoOracao from '@/components/TextoOracao';
 
-// Textos das Orações Eucarísticas e do Santo rezado, colados pelo administrador
+// Textos das Orações Eucarísticas, do Santo rezado e das Preces (Credo, Alma de Cristo), colados pelo administrador
 export default function Oracoes() {
   const [lista, setLista] = useState([]);
   const [aberta, setAberta] = useState(null);
@@ -36,7 +36,10 @@ export default function Oracoes() {
         </ul>
         Primeiro cadastre o <strong>Santo (rezado)</strong>, que vale para todas as orações.
       </div>
-      {lista.map(o => (
+      {[['eucaristica', null], ['preces', 'Preces · depois da Música durante a homilia (domingos e solenidades)'], ['final', 'Preces · entre a Ação de Graças e a Saída (domingos e solenidades)']].map(([g, titulo]) => <div key={g}>
+      {titulo && <h2 style={{ marginTop: 24 }}>{titulo}</h2>}
+      {titulo && g === 'preces' && <p className="mut" style={{ marginTop: -6, fontSize: '.9rem' }}>Nas preces, linha sem marcação é rezada por todos (em negrito). O <strong>Credo</strong> vem selecionado; o Credo Niceno-Constantinopolitano fica como opção na hora da missa.</p>}
+      {lista.filter(o => (o.grupo || 'eucaristica') === g).map(o => (
         <div key={o.id} className="card">
           <div className="row">
             <span><strong>{o.nome}</strong> <span className={o.texto ? 'okmsg' : 'falta'} style={{ fontSize: '.85rem' }}>{o.texto ? '✓ cadastrado' : 'sem texto'}</span></span>
@@ -45,18 +48,19 @@ export default function Oracoes() {
           {aberta === o.id && (
             <div style={{ marginTop: 10 }}>
               <textarea rows={16} value={texto} onChange={e => setTexto(e.target.value)} spellCheck={false}
-                placeholder={o.sigla === 'SANTO' ? 'T: …texto do Santo…' : '# Diálogo do Prefácio\nP: …\nT: …\n…\n[SANTO]\n# Depois do Santo\nP: …\nT: Amém.'}
+                placeholder={o.grupo && o.grupo !== 'eucaristica' ? 'Cole aqui o texto (cada linha em branco separa um parágrafo)' : o.sigla === 'SANTO' ? 'T: …texto do Santo…' : '# Diálogo do Prefácio\nP: …\nT: …\n…\n[SANTO]\n# Depois do Santo\nP: …\nT: Amém.'}
                 style={{ fontFamily: 'ui-monospace, Menlo, Consolas, monospace', fontSize: '.9rem' }} />
               <div className="row" style={{ justifyContent: 'flex-start' }}>
                 <button onClick={() => salvar(o)}>Salvar</button>
                 <button className="sec" onClick={() => setVer(!ver)}>{ver ? 'Esconder prévia' : 'Ver como fica'}</button>
                 {msg && <span className={msg.startsWith('✓') ? 'okmsg' : 'err'}>{msg}</span>}
               </div>
-              {ver && <div className="cer" style={{ marginTop: 10 }}><TextoOracao texto={texto} santo={o.sigla === 'SANTO' ? '' : santo} onSantoCantado={o.sigla === 'SANTO' ? null : () => {}} /></div>}
+              {ver && <div className="cer" style={{ marginTop: 10 }}><TextoOracao texto={texto} todos={o.grupo !== 'eucaristica'} santo={o.sigla === 'SANTO' || o.grupo !== 'eucaristica' ? '' : santo} onSantoCantado={o.sigla === 'SANTO' || o.grupo !== 'eucaristica' ? null : () => {}} /></div>}
             </div>
           )}
         </div>
       ))}
+      </div>)}
     </>
   );
 }

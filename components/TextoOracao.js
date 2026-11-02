@@ -2,8 +2,9 @@
 import { blocosOracao } from '@/lib/oracao';
 
 // Mostra uma Oração Eucarística: presidente normal, respostas em negrito, Santo no lugar marcado
-export default function TextoOracao({ texto, santo, onSantoCantado, fonte = 1 }) {
-  const blocos = blocosOracao(texto);
+// todos: linhas sem marcação são rezadas por todos (Credo, Alma de Cristo)
+export default function TextoOracao({ texto, santo, onSantoCantado, fonte = 1, todos = false }) {
+  const blocos = blocosOracao(texto, todos ? 'resp' : 'pres');
   const santoBlocos = blocosOracao(santo);
   return (
     <div className="oe-texto" style={{ fontSize: `${1.05 * fonte}rem` }}>
@@ -22,7 +23,7 @@ export default function TextoOracao({ texto, santo, onSantoCantado, fonte = 1 })
         );
         return (
           <p key={k} className={b.tipo} style={{ whiteSpace: 'pre-wrap' }}>
-            <i>{b.tipo === 'resp' ? 'Todos' : 'Pres.'}</i>{b.t}
+            {!(todos && b.tipo === 'resp') && <i>{b.tipo === 'resp' ? 'Todos' : 'Pres.'}</i>}{b.t}
           </p>
         );
       })}

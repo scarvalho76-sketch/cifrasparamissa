@@ -27,7 +27,7 @@ const diaBrasilia = s => new Intl.DateTimeFormat('en-CA', { timeZone: 'America/S
 // Convidado: depois do dia da celebração (o link vale até esse dia), apaga deste aparelho tudo o que foi guardado desta missa
 async function apagarCopiaDoConvidado(id) {
   try {
-    [chaveLocal(id), chaveLocal(id) + ':leituras', chaveLocal(id) + ':pagina', chaveLocal(id) + ':ajustes', 'missa:convite:' + id]
+    [chaveLocal(id), chaveLocal(id) + ':leituras', chaveLocal(id) + ':pagina', chaveLocal(id) + ':ajustes', chaveLocal(id) + ':oe', chaveLocal(id) + ':preces', 'missa:convite:' + id]
       .forEach(k => localStorage.removeItem(k));
     // sem link de músico nem outra missa de convidado guardada, a Biblioteca também sai
     const outros = Object.keys(localStorage).some(k => k.startsWith('missa:convite:'));
@@ -152,6 +152,8 @@ export default function Cerimonia() {
   const [biblioteca, setBiblioteca] = useState(null); // para a música avulsa
   const [avulsa, setAvulsa] = useState(null);
   const [oeSel, setOeSel] = useState(null);       // Oração Eucarística escolhida na hora
+  const [preceSel, setPreceSel] = useState(null); // Credo escolhido na hora (Preces)
+  const [celebracaoDia, setCelebracaoDia] = useState(''); // nome da celebração na Liturgia Diária (para saber se é solenidade)
   const [voltarOE, setVoltarOE] = useState(false); // veio da Oração para o Santo cantado
   useTelaAcesa();
   // Pedal de virar página (M-Vave e similares, que funcionam como teclado):
@@ -186,7 +188,7 @@ export default function Cerimonia() {
     setFormato(lerPref('missa:formato', null));
     setUsaCapo(lerPref('missa:capo', null));
     setQuebrar(lerPref('missa:quebrar', true));
-    setOeSel(lerPref(chaveLocal(escala) + ':oe', null));
+    setOeSel(lerPref(chaveLocal(escala) + ':oe', null)); setPreceSel(lerPref(chaveLocal(escala) + ':preces', null));
   }, [escala]);
   const ajustar = (id, delta) => {
     const novo = { ...ajustes, [id]: delta === null ? 0 : (ajustes[id] || 0) + delta };
@@ -203,8 +205,8 @@ export default function Cerimonia() {
       if (!r.ok) return;
       const l = await r.json();
       if (!l?.leituras?.length && !l?.salmo) return;
-      setLeituras(l.leituras || []); setSalmo(l.salmo || null);
-      try { localStorage.setItem(chaveLocal(escala) + ':leituras', JSON.stringify({ data: dataIso(dataHora), leituras: l.leituras, salmo: l.salmo })); } catch {}
+      setLeituras(l.leituras || []); setSalmo(l.salmo || null); setCelebracaoDia(l.celebracao || '');
+      try { localStorage.setItem(chaveLocal(escala) + ':leituras', JSON.stringify({ data: dataIso(dataHora), leituras: l.leituras, salmo: l.salmo, celebracao: l.celebracao || '' })); } catch {}
     } catch {}
   }
 
@@ -234,7 +236,7 @@ export default function Cerimonia() {
     try { const b = JSON.parse(localStorage.getItem('missa:biblioteca') || 'null'); if (Array.isArray(b)) setBiblioteca(b); } catch {}
     const local = lerLocal(escala);
     if (local) setD(local);
-    try { const g = JSON.parse(localStorage.getItem(chaveLocal(escala) + ':leituras') || 'null'); if (g && local && g.data === dataIso(local.data_hora)) { setLeituras(g.leituras); setSalmo(g.salmo || null); } } catch {}
+    try { const g = JSON.parse(localStorage.getItem(chaveLocal(escala) + ':leituras') || 'null'); if (g && local && g.data === dataIso(local.data_hora)) { setLeituras(g.leituras); setSalmo(g.salmo || null); setCelebracaoDia(g.celebracao || ''); } } catch {}
     try { setBaixado(localStorage.getItem(chaveLocal(escala) + ':pagina') === '1'); } catch {}
     setOnline(navigator.onLine);
     const on = () => setOnline(true), off = () => setOnline(false);
@@ -327,8 +329,18 @@ export default function Cerimonia() {
     const k = ev >= 0 ? ev + 1 : itens.findIndex(i => i.numero && i.numero > 5);
     itens = k >= 0 ? [...itens.slice(0, k), v, ...itens.slice(k)] : [...itens, v];
   }
+  // Preces (só aos domingos e nas solenidades): Credo depois da Música durante a homilia (antes do Ofertório)
+  // e Alma de Cristo entre a Ação de Graças (10) e a Saída (11)
+  const domingoOuSolenidade = new Date(d.data_hora).getDay() === 0
+    || /solenidade/i.test(celebracaoDia + ' ' + (d.titulo || ''))
+    || (!celebracaoDia && d.tempo === 'Solenidade / Festa');
+  const precesCredo = domingoOuSolenidade ? (d.oracoes || []).filter(o => o.grupo === 'preces') : [];
+  const precesFinal = domingoOuSolenidade ? (d.oracoes || []).filter(o => o.grupo === 'final') : [];
+  if (precesCredo.length) antesDoNumero(6, { id: 'preces-credo', prece: precesCredo, momento: 'Preces', numero: null });
+  if (precesFinal.length) antesDoNumero(11, { id: 'preces-final', prece: precesFinal, momento: 'Preces', numero: null });
+  const escolherPrece = s2 => { setPreceSel(s2); gravarPref(chaveLocal(escala) + ':preces', s2); };
   // Oração Eucarística: seção sem número entre o Ofertório (6) e o Santo (7)
-  const oracoes = (d.oracoes || []).filter(o => o.sigla !== 'SANTO');
+  const oracoes = (d.oracoes || []).filter(o => o.sigla !== 'SANTO' && (o.grupo || 'eucaristica') === 'eucaristica');
   const santoRezado = (d.oracoes || []).find(o => o.sigla === 'SANTO')?.texto || '';
   if (oracoes.length) antesDoNumero(7, { id: 'oe', oe: true, momento: 'Oração Eucarística', numero: null });
   const idxOE = itens.findIndex(x => x.oe);
@@ -414,6 +426,37 @@ export default function Cerimonia() {
                     : <p className="mut">Toque na oração que o padre começar.</p>}
                   <div id={'fim-' + n}>
                     {itens[prox] && <button className="cer-prox" onClick={() => abrir(prox)}>Próximo momento ▸ {itens[prox].momento}</button>}
+                  </div>
+                  <Rolagem key={i.id} alvoId={'fim-' + n} />
+                </div>
+              )}
+            </div>
+          );
+        }
+        // Preces (Credo à escolha na hora, com o Credo pré-selecionado; Alma de Cristo no fim)
+        if (i.prece) {
+          const ativo = aberto === n;
+          const opcoes = i.prece;
+          const efetiva = opcoes.some(o => o.sigla === preceSel) ? preceSel : (opcoes.some(o => o.sigla === 'CREDO') ? 'CREDO' : opcoes[0].sigla);
+          const sel = opcoes.find(o => o.sigla === efetiva);
+          return (
+            <div key={i.id} ref={el => { refs.current[n] = el; }} className={'card cer-mom' + (ativo ? ' cer-ativo' : '')}>
+              <button type="button" className="cer-cab" onClick={() => abrir(n)} aria-expanded={ativo}>
+                <span className="cer-num cer-sem">✦</span>
+                <span style={{ flex: 1, textAlign: 'left' }}>
+                  <span className="cer-momento">Preces</span>
+                  <span className="cer-musica">{sel.nome}</span>
+                </span>
+                <span aria-hidden="true">{ativo ? '▾' : '▸'}</span>
+              </button>
+              {ativo && (
+                <div style={{ marginTop: 10 }}>
+                  {opcoes.length > 1 && <div className="oe-chips" role="group" aria-label="Escolher a prece">
+                    {opcoes.map(o => <button key={o.sigla} type="button" className={efetiva === o.sigla ? '' : 'sec'} onClick={() => escolherPrece(o.sigla)}>{o.sigla === 'CREDO' ? 'Credo' : o.sigla === 'NICENO' ? 'Credo Niceno' : o.nome}</button>)}
+                  </div>}
+                  <TextoOracao texto={sel.texto} fonte={fonte} todos />
+                  <div id={'fim-' + n}>
+                    {n < itens.length - 1 && <button className="cer-prox" onClick={() => abrir(n + 1)}>Próximo momento ▸ {itens[n + 1].momento}</button>}
                   </div>
                   <Rolagem key={i.id} alvoId={'fim-' + n} />
                 </div>
