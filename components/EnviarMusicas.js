@@ -23,6 +23,6 @@ export function mensagemDasMusicas(celebracao, itens, musicas) {
 export default function EnviarMusicas({ celebracao, itens, musicas }) {
   const texto = mensagemDasMusicas(celebracao, itens, musicas);
   return (
-    <a className="sec mini" style={{ textDecoration: 'none' }} href={'https://wa.me/?text=' + encodeURIComponent(texto)} target="_blank" rel="noreferrer">💬 Enviar músicas</a>
+    <a className="botao sec" style={{ textDecoration: 'none', minHeight: 32, padding: '2px 10px', fontSize: '.85rem', display: 'inline-flex', alignItems: 'center' }} href={'https://wa.me/?text=' + encodeURIComponent(texto)} target="_blank" rel="noreferrer">💬 Enviar músicas</a>
   );
 }
