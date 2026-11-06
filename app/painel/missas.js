@@ -12,6 +12,7 @@ import CampoDataHora from './campoData';
 import LeiturasDoDia from './leituras';
 import { ehConta } from '@/lib/conta';
 import ConviteBotao from '@/components/ConviteBotao';
+import EnviarMusicas from '@/components/EnviarMusicas';
 import { linkPessoal } from './musicos';
 
 const SEM_GLORIA = ['Advento', 'Quaresma'];
@@ -316,6 +317,7 @@ function Detalhe({ id, musicos, musicas, porMomento, indicadas, momentos, onFech
           <div className="row" style={{ justifyContent: 'flex-start', gap: 6, marginTop: 8 }}>
             <button className="sec mini" onClick={() => { setF({ ...c, data: fmtData(c.data_hora), hora: fmtHora(c.data_hora) }); setEditando(true); }}>Editar dados</button>
             <ConviteBotao missaId={id} dataHora={c.data_hora} titulo={c.titulo} />
+            <EnviarMusicas celebracao={c} itens={itens} musicas={musicas} musicos={musicos} />
           </div>
         </div>
       ) : (
