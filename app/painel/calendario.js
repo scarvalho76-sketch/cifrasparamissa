@@ -22,7 +22,12 @@ export default function Calendario({ onAbrir, onNova, onAbrirEvento, onNovoEvent
   const [eventos, setEventos] = useState([]);
   const [escolha, setEscolha] = useState(null); // dia em que o "+" foi tocado (missa ou evento?)
   const [carregando, setCarregando] = useState(true);
+  // checkbox "Mostrar missas dos amigos": desmarcado por padrão; guardado neste aparelho
+  const [amigos, setAmigos] = useState(() => lerPref('calendario:amigos', false) === true);
+  const [dosAmigos, setDosAmigos] = useState([]);
   const [ano, m] = mes.split('-').map(Number);
+
+  const mudarAmigos = v => { setAmigos(v); gravarPref('calendario:amigos', v); };
 
   useEffect(() => {
     gravarPref('calendario:mes', mes);
@@ -35,6 +40,10 @@ export default function Calendario({ onAbrir, onNova, onAbrirEvento, onNovoEvent
       const { data: evs } = await supabase.from('missa_eventos').select('id, data_hora, tipo, nome, local')
         .gte('data_hora', ini.toISOString()).lt('data_hora', fim.toISOString()).order('data_hora');
       setEventos(evs || []);
+      if (amigos) {
+        const { data: da } = await supabase.rpc('missa_calendario_amigos', { p_ini: ini.toISOString(), p_fim: fim.toISOString() });
+        setDosAmigos(Array.isArray(da) ? da : []);
+      } else setDosAmigos([]);
       const ids = (data || []).map(x => x.id);
       if (ids.length) {
         const { data: its } = await supabase.from('missa_itens').select('celebracao_id, musica_id').in('celebracao_id', ids);
@@ -43,7 +52,7 @@ export default function Calendario({ onAbrir, onNova, onAbrirEvento, onNovoEvent
       } else setResumo({});
       setCarregando(false);
     })();
-  }, [mes]);
+  }, [mes, amigos]);
 
   const mudar = d => { const x = new Date(ano, m - 1 + d, 1); setMes(`${x.getFullYear()}-${p2(x.getMonth() + 1)}`); };
   const hojeMes = () => setMes(`${agora.getFullYear()}-${p2(agora.getMonth() + 1)}`);
@@ -52,9 +61,10 @@ export default function Calendario({ onAbrir, onNova, onAbrirEvento, onNovoEvent
     const r = {};
     missas.forEach(x => { const k = chaveDia(new Date(x.data_hora)); (r[k] ||= []).push(x); });
     eventos.forEach(x => { const k = chaveDia(new Date(x.data_hora)); (r[k] ||= []).push({ ...x, evento: true }); });
+    dosAmigos.forEach(x => { const k = chaveDia(new Date(x.data_hora)); (r[k] ||= []).push({ ...x, deAmigo: true, evento: x.tipo === 'evento' }); });
     Object.values(r).forEach(l => l.sort((a, b) => new Date(a.data_hora) - new Date(b.data_hora)));
     return r;
-  }, [missas, eventos]);
+  }, [missas, eventos, dosAmigos]);
   const hoje = chaveDia(agora);
   const vazios = dias[0].getDay();
   const txtData = d => `${p2(d.getDate())}/${p2(d.getMonth() + 1)}/${d.getFullYear()}`;
@@ -62,6 +72,13 @@ export default function Calendario({ onAbrir, onNova, onAbrirEvento, onNovoEvent
   const novoEvento = d => onNovoEvento(txtData(d));
 
   const Cartao = ({ x }) => {
+    // missas e eventos dos amigos: só para ver (o administrador não abre o que é do amigo)
+    if (x.deAmigo) return (
+      <div className={'cal-missa cal-amigo' + (x.evento ? ' cal-evento' : ' cal-' + (COR[x.tempo] || 'verde'))} title={`Cadastrado por ${x.conta}`}>
+        <span className="cal-hora">{x.evento ? '♪ ' : ''}{fmtHora(x.data_hora)}</span> <span className="cal-tit">{x.evento ? (x.nome || x.evento_tipo || 'Evento') : (x.titulo || 'Missa')}</span>
+        <span className="cal-local">👤 {x.conta}{x.local ? ' · ' + x.local : ''}</span>
+      </div>
+    );
     if (x.evento) return (
       <button type="button" className="cal-missa cal-evento" onClick={() => onAbrirEvento(x.id)} title="Abrir o evento">
         <span className="cal-hora">♪ {fmtHora(x.data_hora)}</span> <span className="cal-tit">{x.nome || x.tipo || 'Evento'}</span>
@@ -96,6 +113,10 @@ export default function Calendario({ onAbrir, onNova, onAbrirEvento, onNovoEvent
         <li><span className="cal-ponto cal-vermelho" />Semana Santa</li>
         <li><span className="cal-ponto cal-evento" />♪ Evento</li>
       </ul>
+      <label className="row" style={{ gap: 8, margin: '0 0 12px', cursor: 'pointer', width: 'fit-content' }}>
+        <input type="checkbox" checked={amigos} onChange={e => mudarAmigos(e.target.checked)} />
+        <span>Mostrar também as missas e eventos dos amigos</span>
+      </label>
       {carregando && <p className="mut">Carregando…</p>}
 
       {/* grade: telas largas */}
@@ -139,7 +160,7 @@ export default function Calendario({ onAbrir, onNova, onAbrirEvento, onNovoEvent
           );
         })}
       </ol>
-      {!carregando && missas.length === 0 && eventos.length === 0 && <p className="mut" style={{ marginTop: 10 }}>Nada cadastrado em {MESES[m - 1].toLowerCase()}.</p>}
+      {!carregando && missas.length === 0 && eventos.length === 0 && dosAmigos.length === 0 && <p className="mut" style={{ marginTop: 10 }}>Nada cadastrado em {MESES[m - 1].toLowerCase()}.</p>}
     </>
   );
 }
