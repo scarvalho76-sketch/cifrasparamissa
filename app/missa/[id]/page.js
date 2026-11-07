@@ -2,6 +2,7 @@
 import { useEffect, useRef, useState } from 'react';
 import { useParams } from 'next/navigation';
 import { supabase } from '@/lib/supabase';
+import { tonsLocais, sincronizarTons, salvarTomPreferido } from '@/lib/tons';
 import { dataLonga, dataHoraCurta, dataIso, simples, fmtData } from '@/lib/util';
 import ConviteBotao from '@/components/ConviteBotao';
 import TextoOracao from '@/components/TextoOracao';
@@ -143,6 +144,7 @@ export default function Cerimonia() {
   const [msg, setMsg] = useState('');
   const refs = useRef({});
   const [ajustes, setAjustes] = useState({});
+  const [tons, setTons] = useState({}); // tom preferido de cada música (do próprio cantor)
   const [fonte, setFonte] = useState(1);
   const [formato, setFormato] = useState(null);
   const [usaCapo, setUsaCapo] = useState(null);
@@ -190,8 +192,25 @@ export default function Cerimonia() {
     setQuebrar(lerPref('missa:quebrar', true));
     setOeSel(lerPref(chaveLocal(escala) + ':oe', null)); setPreceSel(lerPref(chaveLocal(escala) + ':preces', null));
   }, [escala]);
-  const ajustar = (id, delta) => {
-    const novo = { ...ajustes, [id]: delta === null ? 0 : (ajustes[id] || 0) + delta };
+  // Tom que vale para a música: o último usado pelo cantor; se não houver, o cadastrado na missa
+  const tomDe = i => (i.musica_id && tons[i.musica_id]) || i.tom;
+  // Meio tom para cima ou para baixo: o novo tom fica guardado para a música (vale nas próximas vezes)
+  const ajustar = (i, delta) => {
+    const auto = i.tom_original && tomDe(i) ? distancia(i.tom_original, tomDe(i)) : 0;
+    const atual = (auto || 0) + (ajustes[i.id] || 0);
+    const semAjuste = { ...ajustes, [i.id]: 0 };
+    if (delta === null) {
+      // Desfazer: volta ao tom cadastrado e esquece o tom guardado desta música
+      setAjustes(semAjuste); gravarPref(chaveLocal(escala) + ':ajustes', semAjuste);
+      if (i.musica_id) salvarTomPreferido(i.musica_id, '').then(setTons);
+      return;
+    }
+    if (i.musica_id && i.tom_original && nomeDoTom(i.tom_original, atual + delta)) {
+      setAjustes(semAjuste); gravarPref(chaveLocal(escala) + ':ajustes', semAjuste);
+      salvarTomPreferido(i.musica_id, nomeDoTom(i.tom_original, atual + delta)).then(setTons);
+      return;
+    }
+    const novo = { ...ajustes, [i.id]: (ajustes[i.id] || 0) + delta };
     setAjustes(novo); gravarPref(chaveLocal(escala) + ':ajustes', novo);
   };
   const mudarFonte = delta => { const v = Math.min(2, Math.max(0.7, Math.round((fonte + delta) * 10) / 10)); setFonte(v); gravarPref('missa:fonte', v); };
@@ -234,6 +253,7 @@ export default function Cerimonia() {
       return;
     }
     try { const b = JSON.parse(localStorage.getItem('missa:biblioteca') || 'null'); if (Array.isArray(b)) setBiblioteca(b); } catch {}
+    setTons(tonsLocais());
     const local = lerLocal(escala);
     if (local) setD(local);
     try { const g = JSON.parse(localStorage.getItem(chaveLocal(escala) + ':leituras') || 'null'); if (g && local && g.data === dataIso(local.data_hora)) { setLeituras(g.leituras); setSalmo(g.salmo || null); setCelebracaoDia(g.celebracao || ''); } } catch {}
@@ -255,6 +275,7 @@ export default function Cerimonia() {
         setD(data); gravarLocal(escala, data); setErro('');
         carregarLeituras(data.data_hora);
         carregarBiblioteca(tk, cv);
+        sincronizarTons().then(setTons);
       } catch (e) {
         if (!local) setErro(navigator.onLine ? (e.message || 'Não foi possível abrir.') : 'Sem internet e esta missa ainda não foi guardada neste aparelho.');
       }
@@ -322,7 +343,7 @@ export default function Cerimonia() {
   // Música durante a homilia: seção sem número entre a Aclamação (5) e o Ofertório (6)
   const escolhida = avulsa && biblioteca ? biblioteca.find(m => m.id === avulsa) : null;
   {
-    const v = { id: escolhida ? 'avulsa-' + escolhida.id : 'avulsa', momento: 'Música durante a homilia', numero: null, obs: '', avulsa: true,
+    const v = { id: escolhida ? 'avulsa-' + escolhida.id : 'avulsa', momento: 'Música durante a homilia', numero: null, obs: '', avulsa: true, musica_id: escolhida?.id || null,
       ...(escolhida ? { nome: escolhida.nome, artista: escolhida.artista, cifra: escolhida.cifra, letra: escolhida.letra, grade: escolhida.grade,
         tom_original: escolhida.tom_original, tom: escolhida.tom_padrao || escolhida.tom_original, capo: escolhida.capo || 0 } : {}) };
     const ev = itens.findIndex(i => i.leitura?.tipo === 'evangelho');
@@ -494,7 +515,8 @@ export default function Cerimonia() {
           );
         }
         // Transposição: do tom em que a cifra foi escrita para o tom do cantor, mais o ajuste manual
-        const auto = mostraCifra && i.tom && i.tom_original ? distancia(i.tom_original, i.tom) : null;
+        const tomUsado = tomDe(i);
+        const auto = mostraCifra && tomUsado && i.tom_original ? distancia(i.tom_original, tomUsado) : null;
         const ajuste = ajustes[i.id] || 0;
         const total = (auto || 0) + ajuste;
         const destino = i.tom_original ? nomeDoTom(i.tom_original, total) : null;
@@ -507,7 +529,8 @@ export default function Cerimonia() {
         // letra: a cadastrada; se não houver, a própria cifra sem as linhas de acordes
         const letraVista = i.letra || letraDaCifra(i.cifra);
         const base = mostraCifra ? (querGrade ? (i.grade || gradeAuto || i.cifra) : i.cifra) : letraVista;
-        const texto = mostraCifra ? transporCifra(base, total - capo, capo ? forma : (ajuste === 0 && auto !== null ? i.tom : destino)) : base;
+        const texto = mostraCifra ? transporCifra(base, total - capo, capo ? forma : (ajuste === 0 && auto !== null ? tomUsado : destino)) : base;
+        const semAjuste = ajuste === 0 && !(i.musica_id && tons[i.musica_id]);
         const falta = i.avulsa && !i.nome ? '' : !i.nome ? 'Nenhuma música escolhida para este momento.' : mostraCifra ? 'A cifra desta música ainda não foi cadastrada.' : 'A letra desta música ainda não foi cadastrada.';
         let aviso = '';
         if (mostraCifra && i.cifra && i.tom && !i.tom_original) aviso = 'O tom original desta cifra não foi cadastrado, por isso ela não foi transposta automaticamente. Use os botões de meio tom se precisar.';
@@ -546,9 +569,9 @@ export default function Cerimonia() {
                     </span>
                     <span className="row" style={{ gap: 6 }}>
                       {/* Desfazer vem antes e sempre ocupa o lugar (invisível sem ajuste): os botões de ½ tom não mudam de posição */}
-                      <button type="button" className="sec cer-mini" onClick={() => ajustar(i.id, null)} disabled={ajuste === 0} aria-hidden={ajuste === 0} tabIndex={ajuste === 0 ? -1 : 0} style={{ visibility: ajuste === 0 ? 'hidden' : 'visible' }}>Desfazer</button>
-                      <button type="button" className="sec cer-mini" onClick={() => ajustar(i.id, -1)}>−½ tom</button>
-                      <button type="button" className="sec cer-mini" onClick={() => ajustar(i.id, 1)}>+½ tom</button>
+                      <button type="button" className="sec cer-mini" onClick={() => ajustar(i, null)} disabled={semAjuste} aria-hidden={semAjuste} tabIndex={semAjuste ? -1 : 0} style={{ visibility: semAjuste ? 'hidden' : 'visible' }}>Desfazer</button>
+                      <button type="button" className="sec cer-mini" onClick={() => ajustar(i, -1)}>−½ tom</button>
+                      <button type="button" className="sec cer-mini" onClick={() => ajustar(i, 1)}>+½ tom</button>
                     </span>
                   </div>
                 )}
