@@ -5,6 +5,7 @@ import { supabase } from '@/lib/supabase';
 import { dataLonga, lerPref, gravarPref } from '@/lib/util';
 import { transporCifra, distancia, nomeDoTom, gerarGrade, letraDaCifra } from '@/lib/musica';
 import { carregarBiblioteca } from '@/lib/biblioteca';
+import { tonsLocais, sincronizarTons, salvarTomPreferido } from '@/lib/tons';
 import Rolagem from '@/components/Rolagem';
 import BuscaMusicas from '@/components/BuscaMusicas';
 import { destacarPartes } from '@/components/Destaque';
@@ -43,6 +44,7 @@ export default function ModoEvento() {
   const [usaCapo, setUsaCapo] = useState(true);
   const [quebrar, setQuebrar] = useState(true);
   const [ajustes, setAjustes] = useState({});
+  const [tons, setTons] = useState({}); // último tom de cada música usado pelo próprio cantor
   const [biblio, setBiblio] = useState(null);
   const [adicionando, setAdicionando] = useState(false);
   const [baixando, setBaixando] = useState(false);
@@ -72,6 +74,8 @@ export default function ModoEvento() {
     let cv = new URLSearchParams(location.search).get('c');
     try { if (cv) localStorage.setItem('evento:convite:' + id, cv); else cv = localStorage.getItem('evento:convite:' + id); } catch {}
     setConvite(cv);
+    setTons(tonsLocais());
+    if (!cv) sincronizarTons().then(setTons);
     let local = ler(chave(id));
     // convidado depois do dia do evento: apaga a cópia guardada
     const dia = s => new Intl.DateTimeFormat('en-CA', { timeZone: 'America/Sao_Paulo', year: 'numeric', month: '2-digit', day: '2-digit' }).format(new Date(s));
@@ -149,7 +153,28 @@ export default function ModoEvento() {
   }
   const mudarFonte = dlt => { const v = Math.min(2, Math.max(0.7, Math.round((fonte + dlt) * 10) / 10)); setFonte(v); gravarPref('missa:fonte', v); };
   const mudarFormato = v => { setFormato(v); gravarPref('missa:formato', v); };
-  const ajustar = (k, dlt) => { const novo = { ...ajustes, [k]: dlt === null ? 0 : (ajustes[k] || 0) + dlt }; setAjustes(novo); gravarPref(chave(id) + ':ajustes', novo); };
+  // Tom que vale para a música: o último usado pelo cantor; se não houver, o cadastrado no evento ou na Biblioteca
+  const tomDe = it => (it.musica_id && tons[it.musica_id]) || it.tom || it.m?.tom_padrao || it.m?.tom_original || '';
+  // Meio tom para cima ou para baixo: o novo tom fica guardado para a música (vale nas próximas vezes)
+  const ajustar = (it, dlt) => {
+    const auto = it.m?.tom_original && tomDe(it) ? distancia(it.m.tom_original, tomDe(it)) : 0;
+    const atual = (auto || 0) + (ajustes[it.id] || 0);
+    const zerado = { ...ajustes, [it.id]: 0 };
+    if (dlt === null) {
+      // Desfazer: volta ao tom cadastrado e esquece o tom guardado desta música
+      setAjustes(zerado); gravarPref(chave(id) + ':ajustes', zerado);
+      if (it.musica_id) salvarTomPreferido(it.musica_id, '').then(setTons);
+      return;
+    }
+    const novoTom = it.m?.tom_original ? nomeDoTom(it.m.tom_original, atual + dlt) : null;
+    if (it.musica_id && novoTom) {
+      setAjustes(zerado); gravarPref(chave(id) + ':ajustes', zerado);
+      salvarTomPreferido(it.musica_id, novoTom).then(setTons);
+      return;
+    }
+    const novo = { ...ajustes, [it.id]: (ajustes[it.id] || 0) + dlt };
+    setAjustes(novo); gravarPref(chave(id) + ':ajustes', novo);
+  };
   function sair() {
     if (document.referrer && new URL(document.referrer).origin === location.origin && history.length > 1) history.back();
     else location.href = '/painel';
@@ -206,9 +231,10 @@ export default function ModoEvento() {
       {itens.map((it, n) => {
         const m = it.m || {};
         const ativo = aberto === n;
-        const tom = it.tom || m.tom_padrao || m.tom_original || '';
+        const tom = tomDe(it);
         const auto = mostraCifra && tom && m.tom_original ? distancia(m.tom_original, tom) : null;
         const ajuste = ajustes[it.id] || 0;
+        const semAjuste = ajuste === 0 && !(it.musica_id && tons[it.musica_id]);
         const total = (auto || 0) + ajuste;
         const capoMusica = it.capo ?? m.capo ?? 0;
         const capo = mostraCifra && usaCapo ? capoMusica : 0;
@@ -252,9 +278,9 @@ export default function ModoEvento() {
                     </span>
                     <span className="row" style={{ gap: 6 }}>
                       {/* Desfazer vem antes e sempre ocupa o lugar (invisível sem ajuste): os botões de ½ tom não mudam de posição */}
-                      <button type="button" className="sec cer-mini" onClick={() => ajustar(it.id, null)} disabled={ajuste === 0} aria-hidden={ajuste === 0} tabIndex={ajuste === 0 ? -1 : 0} style={{ visibility: ajuste === 0 ? 'hidden' : 'visible' }}>Desfazer</button>
-                      <button type="button" className="sec cer-mini" onClick={() => ajustar(it.id, -1)}>−½ tom</button>
-                      <button type="button" className="sec cer-mini" onClick={() => ajustar(it.id, 1)}>+½ tom</button>
+                      <button type="button" className="sec cer-mini" onClick={() => ajustar(it, null)} disabled={semAjuste} aria-hidden={semAjuste} tabIndex={semAjuste ? -1 : 0} style={{ visibility: semAjuste ? 'hidden' : 'visible' }}>Desfazer</button>
+                      <button type="button" className="sec cer-mini" onClick={() => ajustar(it, -1)}>−½ tom</button>
+                      <button type="button" className="sec cer-mini" onClick={() => ajustar(it, 1)}>+½ tom</button>
                     </span>
                   </div>
                 )}
