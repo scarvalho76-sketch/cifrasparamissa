@@ -157,6 +157,10 @@ export default function Cerimonia() {
   const [preceSel, setPreceSel] = useState(null); // Credo escolhido na hora (Preces)
   const [celebracaoDia, setCelebracaoDia] = useState(''); // nome da celebração na Liturgia Diária (para saber se é solenidade)
   const [voltarOE, setVoltarOE] = useState(false); // veio da Oração para o Santo cantado
+  const [nova, setNova] = useState(false); // teste: tela cerimônia (menu lateral com os momentos)
+  const [menuAberto, setMenuAberto] = useState(false); // celular: gaveta de momentos
+  // Tela cerimônia: abre sempre com o primeiro momento escolhido
+  useEffect(() => { if (nova && d && aberto === null) setAberto(0); }, [nova, d]);
   useTelaAcesa();
   // Pedal de virar página (M-Vave e similares, que funcionam como teclado):
   //   ← liga/desliga a rolagem · → próxima seção · ↓/Page Down desce o texto · ↑/Page Up sobe o texto
@@ -190,6 +194,7 @@ export default function Cerimonia() {
     setFormato(lerPref('missa:formato', null));
     setUsaCapo(lerPref('missa:capo', null));
     setQuebrar(lerPref('missa:quebrar', true));
+    setNova(lerPref('missa:layout', '') === 'cerimonia');
     setOeSel(lerPref(chaveLocal(escala) + ':oe', null)); setPreceSel(lerPref(chaveLocal(escala) + ':preces', null));
   }, [escala]);
   // Tom que vale para a música: o último usado pelo cantor; se não houver, o cadastrado na missa
@@ -306,6 +311,7 @@ export default function Cerimonia() {
     else location.href = token ? '/m/' + token : '/painel';
   }
 
+  function alternarLayout() { const v = !nova; setNova(v); gravarPref('missa:layout', v ? 'cerimonia' : 'atual'); setMenuAberto(false); }
   function abrir(i) {
     const novo = aberto === i ? null : i;
     setAberto(novo);
@@ -377,7 +383,7 @@ export default function Cerimonia() {
   const algumCapo = mostraCifra && itens.some(i => i.capo > 0);
 
   return (
-    <div className="wrap cer">
+    <div className={'wrap cer' + (nova ? ' cer-nova' : '') + (menuAberto ? ' cer-menu-on' : '')}>
       <div className="card">
         <div className="mut">{dt(d.data_hora)}</div>
         <h1 style={{ marginTop: 4 }}>{d.titulo || 'Missa'}</h1>
@@ -402,6 +408,11 @@ export default function Cerimonia() {
             ))}
           </span>
         </div>
+        <div className="row" style={{ marginTop: 10, justifyContent: 'flex-start' }}>
+          <span className="mut" style={{ fontSize: '.9rem' }}>Tela</span>
+          <button type="button" className={'cer-mini' + (nova ? ' sec' : '')} onClick={() => nova && alternarLayout()}>Atual</button>
+          <button type="button" className={'cer-mini' + (nova ? '' : ' sec')} onClick={() => !nova && alternarLayout()}>🧪 Cerimônia (teste)</button>
+        </div>
         {mostraCifra && (
           <label className="ev-check" style={{ marginTop: 10 }}>
             <input type="checkbox" checked={quebrar} onChange={e => { setQuebrar(e.target.checked); gravarPref('missa:quebrar', e.target.checked); }} />
@@ -419,6 +430,19 @@ export default function Cerimonia() {
         )}
       </div>
 
+      {nova && (
+        <nav className="cer-menu card" aria-label="Momentos da missa">
+          <div className="cer-menu-cab">Momentos</div>
+          {itens.map((i, n) => (
+            <button key={i.id} type="button" className={'cer-menu-item' + (aberto === n ? ' on' : '')} aria-current={aberto === n ? 'step' : undefined} onClick={() => { abrir(n); setMenuAberto(false); }}>
+              <span className="cer-menu-n">{n + 1}</span>
+              <span className="cer-menu-txt"><strong>{i.oe ? 'Oração Eucarística' : i.momento}</strong><span className="mut">{i.oe ? '' : (i.nome || (i.avulsa ? 'Buscar música' : ''))}</span></span>
+            </button>
+          ))}
+        </nav>
+      )}
+      {nova && <button type="button" className="cer-menu-btn sec" onClick={() => setMenuAberto(!menuAberto)} aria-expanded={menuAberto}>☰ Momentos</button>}
+      <div className="cer-principal">
       {itens.map((i, n) => {
         // Oração Eucarística (escolhida na hora), com o Santo rezado no lugar e o atalho para o Santo cantado
         if (i.oe) {
@@ -601,6 +625,7 @@ export default function Cerimonia() {
       })}
       {d.obs && <div className="card"><strong>Observações</strong><p style={{ whiteSpace: 'pre-wrap', margin: '6px 0 0' }}>{d.obs}</p></div>}
       {!d.convidado && <button type="button" className="sec cer-prox" style={{ marginTop: 8 }} onClick={sair}>◂ Sair do modo celebração</button>}
+      </div>
     </div>
   );
 }

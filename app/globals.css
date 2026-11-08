@@ -229,3 +229,27 @@ a.botao.sec{background:transparent;color:var(--ouro-escuro)}
 .conferir-lista > div.conferir-erro{font-weight:600}
 .conferir-cnbb{display:block;font-weight:400;font-size:.85rem;color:var(--mut);margin:0 0 4px 12px}
 .aviso-coracao{margin:10px 0 12px;padding:8px 12px;border-left:3px solid var(--vermelho);background:rgba(184,64,44,.08);border-radius:0 3px 3px 0}
+
+/* Tela cerimônia (teste): menu lateral com os momentos; no celular, a lista abre pelo botão ☰ */
+.cer-menu-btn{display:none}
+.cer-nova{max-width:1200px}
+@media (min-width:900px){
+  .cer-nova{display:grid;grid-template-columns:280px minmax(0,1fr);gap:16px;align-items:start}
+  .cer-nova > .card:first-child{grid-column:1 / -1}
+  .cer-nova .cer-menu{position:sticky;top:12px;max-height:calc(100vh - 24px);overflow-y:auto;padding:10px 0;margin:0}
+  .cer-nova .cer-principal{min-width:0}
+  .cer-nova .cer-principal > .cer-mom:not(.cer-ativo){display:none}
+}
+@media (max-width:899px){
+  .cer-nova .cer-menu-btn{display:inline-flex;margin:0 0 10px}
+  .cer-nova .cer-menu{display:none;position:fixed;top:0;left:0;bottom:0;width:84%;max-width:340px;z-index:20;overflow-y:auto;border-radius:0;margin:0;padding:10px 0;box-shadow:6px 0 24px rgba(0,0,0,.2)}
+  .cer-menu-on .cer-menu{display:block}
+  .cer-nova .cer-principal > .cer-mom:not(.cer-ativo){display:none}
+}
+.cer-menu-cab{font:500 .8rem/1 "Jost",sans-serif;letter-spacing:.12em;text-transform:uppercase;color:var(--mut);padding:8px 16px 10px}
+.cer-menu-item{display:flex;align-items:center;gap:10px;width:100%;min-height:52px;padding:8px 16px;background:transparent;color:var(--ink);border:0;border-left:4px solid transparent;border-radius:0;text-align:left;letter-spacing:0;font-weight:400}
+.cer-menu-item:hover{background:transparent;filter:none}
+.cer-menu-item.on{border-left-color:var(--ouro);background:var(--card);font-weight:600;color:var(--carvao)}
+.cer-menu-n{flex:none;width:24px;font-size:.85rem;color:var(--mut)}
+.cer-menu-txt{display:flex;flex-direction:column;min-width:0;line-height:1.25}
+.cer-menu-txt > span{font-size:.85rem;white-space:nowrap;overflow:hidden;text-overflow:ellipsis}
