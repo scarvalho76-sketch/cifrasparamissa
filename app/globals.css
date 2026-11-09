@@ -253,3 +253,7 @@ a.botao.sec{background:transparent;color:var(--ouro-escuro)}
 .cer-menu-n{flex:none;width:24px;font-size:.85rem;color:var(--mut)}
 .cer-menu-txt{display:flex;flex-direction:column;min-width:0;line-height:1.25}
 .cer-menu-txt > span{font-size:.85rem;white-space:nowrap;overflow:hidden;text-overflow:ellipsis}
+
+/* Refrão em caixa destacada (Opção B): fundo dourado claro, borda ouro e aba escura com o nome */
+.cer-refrao{display:block;position:relative;margin:16px 0 12px;padding:16px 14px 8px;background:#fbf3df;border:1px solid var(--ouro);border-radius:3px}
+.cer-refrao-aba{position:absolute;top:-11px;left:14px;padding:2px 10px;background:var(--preto);color:#fbf3df;font-family:Jost,system-ui,sans-serif;font-size:11px;font-weight:600;line-height:1.4;letter-spacing:.14em;text-transform:uppercase;white-space:nowrap}
