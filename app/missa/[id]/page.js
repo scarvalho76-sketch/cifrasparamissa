@@ -8,8 +8,9 @@ import ConviteBotao from '@/components/ConviteBotao';
 import TextoOracao from '@/components/TextoOracao';
 import Rolagem from '@/components/Rolagem';
 import CifraPre from '@/components/CifraPre';
+import { destacarPartes } from '@/components/Destaque';
 import CalibrarVoz from '@/components/CalibrarVoz';
-import { transporCifra, distancia, nomeDoTom, lerTom, gerarGrade, letraDaCifra, ehLinhaDeAcordes } from '@/lib/musica';
+import { transporCifra, distancia, nomeDoTom, lerTom, gerarGrade, letraDaCifra } from '@/lib/musica';
 
 // Modo celebração: só aquela missa, momento a momento (adaptado do Modo cerimônia do Sonata Casamentos).
 // Quem só canta vê a letra; quem toca vê a cifra ou a grade. Cada um pode trocar.
@@ -109,22 +110,6 @@ function BuscaAvulsa({ biblioteca, escolhida, onEscolher }) {
       ))}
     </div>
   );
-}
-
-// Partes entre colchetes ([Refrão], [Intro]...) em negrito dourado; na cifra/grade, acordes em negrito
-// (a fonte continua de largura fixa, então o alinhamento não muda)
-function destacarPartes(texto, comAcordes = false) {
-  const linhas = String(texto).split('\n');
-  return linhas.map((linha, n) => (
-    <span key={n}>
-      {linha.split(/(\[[^\]\n]+\])/).map((t, k) => {
-        if (k % 2) return <strong key={k} className="cer-parte">{t}</strong>;
-        if (comAcordes && t.trim() && ehLinhaDeAcordes(t.trim())) return <strong key={k} className="cer-acorde">{t}</strong>;
-        return t;
-      })}
-      {n < linhas.length - 1 ? '\n' : null}
-    </span>
-  ));
 }
 
 function Selo({ children, forte }) {

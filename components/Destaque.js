@@ -4,10 +4,11 @@ import { ehLinhaDeAcordes } from '@/lib/musica';
 //   [Refrão] → caixa dourada com aba "Refrão"
 //   [FEMININO] / [MASCULINO] → faixa azul e rosa, para duetos
 // O bloco que segue a marca vai até a linha em branco ou até outra marca.
-const ehMarcaRefrao = l => /^\s*\[\s*refr[aã]o[^\]\n]*\]\s*$/i.test(l);
-const ehMarcaVoz = l => /^\s*\[\s*(feminino|masculino)\s*\]\s*$/i.test(l);
-const ehMarcaQualquer = l => /^\s*\[[^\]\n]+\]\s*$/.test(l);
-const rotuloDaMarca = l => (l.match(/\[\s*([^\]\n]*)\]/)?.[1] || '').trim();
+const ehMarcaRefrao = l => /^\s*\[\s*refr[aã]o[^\]\n]*\]/i.test(l);
+const ehMarcaVoz = l => /^\s*\[\s*(feminino|masculino)\s*\]/i.test(l);
+const ehMarcaQualquer = l => /^\s*\[[^\]\n]+\]/.test(l);
+// nome da marca + o que vem depois (ex.: "[Refrão] 2x" vira "Refrão 2x")
+const rotuloDaMarca = l => { const m = l.match(/^\s*\[\s*([^\]\n]*)\]\s*(.*)$/); return m ? [m[1], m[2]].map(x => x.trim()).filter(Boolean).join(' ') : ''; };
 
 // Uma linha: partes entre colchetes em negrito dourado; na cifra/grade, linhas de acordes em negrito
 function linhaNodes(linha, comAcordes) {
