@@ -66,7 +66,6 @@ export function destacarPartes(texto, comAcordes = false) {
     }
     return (
       <span key={s.key} className={`cer-voz cer-voz-${s.tipo}`}>
-        <span className="cer-voz-aba">{s.rotulo}</span>
         {s.nos}
       </span>
     );
