@@ -260,7 +260,9 @@ a.botao.sec{background:transparent;color:var(--ouro-escuro)}
 
 /* Trecho cantado por homem ou mulher (dueto): faixa azul e rosa à esquerda, com o nome acima */
 .cer-voz{display:block;position:relative;margin:14px 0 10px;padding:12px 0 6px 18px}
-.cer-voz::before{content:"";position:absolute;left:0;top:6px;bottom:4px;width:5px;border-radius:3px;background:linear-gradient(to bottom,#2f6fd6 50%,#e0559a 50%)}
+.cer-voz::before{content:"";position:absolute;left:0;top:6px;bottom:4px;width:5px;border-radius:3px;}
+.cer-voz-masc::before{background:#2f6fd6}
+.cer-voz-fem::before{background:#e0559a}
 
 
 
