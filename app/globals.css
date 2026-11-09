@@ -255,11 +255,7 @@ a.botao.sec{background:transparent;color:var(--ouro-escuro)}
 .cer-menu-txt > span{font-size:.85rem;white-space:nowrap;overflow:hidden;text-overflow:ellipsis}
 
 /* Refrão em caixa destacada (Opção B): fundo dourado claro, borda ouro e aba escura com o nome */
-.cer-refrao{display:block;position:relative;margin:16px 0 12px;padding:16px 14px 8px;background:#fbf3df;border:1px solid var(--ouro);border-radius:3px}
-/* o fundo da caixa é claro nos dois modos, então o texto fica escuro também no modo noturno */
-.cer-refrao{color:#2b2117}
-.cer-refrao .cer-acorde{color:#6e5124}
-.cer-refrao .cer-parte{color:#80602c}
+.cer-refrao{display:block;position:relative;margin:16px 0 12px;padding:16px 14px 8px;background:transparent;border:1px solid var(--ouro);border-radius:3px}
 .cer-refrao-aba{position:absolute;top:-11px;left:14px;padding:2px 10px;background:var(--preto);color:#fbf3df;font-family:Jost,system-ui,sans-serif;font-size:11px;font-weight:600;line-height:1.4;letter-spacing:.14em;text-transform:uppercase;white-space:nowrap}
 
 /* Trecho cantado por homem ou mulher (dueto): faixa azul e rosa à esquerda, com o nome acima */
