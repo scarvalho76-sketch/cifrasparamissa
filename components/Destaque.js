@@ -3,9 +3,10 @@ import { ehLinhaDeAcordes } from '@/lib/musica';
 // Marcas especiais no texto, cada uma numa linha só:
 //   [Refrão] → caixa dourada com aba "Refrão"
 //   [FEMININO] / [MASCULINO] → faixa azul e rosa, para duetos
+//   [AMBOS] → faixa dourada, para trechos cantados por todos
 // O bloco que segue a marca vai até a linha em branco ou até outra marca.
 const ehMarcaRefrao = l => /^\s*\[\s*refr[aã]o[^\]\n]*\]/i.test(l);
-const ehMarcaVoz = l => /^\s*\[\s*(feminino|masculino)\s*\]/i.test(l);
+const ehMarcaVoz = l => /^\s*\[\s*(feminino|masculino|ambos)\s*\]/i.test(l);
 const ehMarcaQualquer = l => /^\s*\[[^\]\n]+\]/.test(l);
 // nome da marca + o que vem depois (ex.: "[Refrão] 2x" vira "Refrão 2x")
 const rotuloDaMarca = l => { const m = l.match(/^\s*\[\s*([^\]\n]*)\]\s*(.*)$/); return m ? [m[1], m[2]].map(x => x.trim()).filter(Boolean).join(' ') : ''; };
@@ -27,8 +28,7 @@ export function destacarPartes(texto, comAcordes = false) {
   linhas.forEach(linha => {
     if (ehMarcaRefrao(linha)) { tipo = 'refrao'; rotulo = rotuloDaMarca(linha) || 'Refrão'; itens.push({ marca: true, tipo, rotulo }); return; }
     if (ehMarcaVoz(linha)) {
-      tipo = /fem/i.test(linha) ? 'fem' : 'masc';
-      rotulo = tipo === 'fem' ? 'Feminino' : 'Masculino';
+      tipo = /fem/i.test(linha) ? 'fem' : /ambos/i.test(linha) ? 'ambos' : 'masc';
       itens.push({ marca: true, tipo, rotulo });
       return;
     }

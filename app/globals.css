@@ -263,6 +263,7 @@ a.botao.sec{background:transparent;color:var(--ouro-escuro)}
 .cer-voz::before{content:"";position:absolute;left:0;top:6px;bottom:4px;width:5px;border-radius:3px;}
 .cer-voz-masc::before{background:#2f6fd6}
 .cer-voz-fem::before{background:#e0559a}
+.cer-voz-ambos::before{background:var(--ouro)}
 
 
 
