@@ -63,9 +63,9 @@ async function guardarPagina() {
       extras.push(...(html.match(/\/_next\/static\/[\w\-.\/~%]+\.(?:js|css)/g) || []));
     } catch {}
   }
-  await cache.addAll([...new Set([location.pathname, '/emblema.webp', ...arquivos])]);
   // a tela do músico é um extra: se algum arquivo falhar, a missa continua guardada
   await Promise.all([...new Set(extras)].map(u => cache.add(u).catch(() => {})));
+  await cache.addAll([...new Set([location.pathname, '/emblema.webp', ...arquivos])]);
 }
 
 function lerPref(k, padrao) { try { const v = localStorage.getItem(k); return v === null ? padrao : JSON.parse(v); } catch { return padrao; } }

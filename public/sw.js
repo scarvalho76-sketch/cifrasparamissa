@@ -14,7 +14,7 @@ self.addEventListener('fetch', (event) => {
     event.respondWith(fetch(req).catch(async () => {
       const cache = await caches.open('missa-celebracao-v1');
       const musico = (await cache.keys()).map(k => new URL(k.url).pathname).find(p => p.startsWith('/m/'));
-      if (!musico) return Response.error();
+      if (!musico) return new Response('<!doctype html><meta charset="utf-8"><meta name="viewport" content="width=device-width,initial-scale=1"><body style="font-family:sans-serif;padding:24px;background:#f7f1e4;color:#3a2c1c"><h2>Sem internet</h2><p>Para abrir o app sem internet, antes baixe uma missa para uso sem internet, com internet.</p></body>', { headers: { 'Content-Type': 'text/html; charset=utf-8' } });
       return new Response('<!doctype html><meta charset="utf-8"><script>location.replace(' + JSON.stringify(musico) + ')</script>',
         { headers: { 'Content-Type': 'text/html; charset=utf-8' } });
     }));
