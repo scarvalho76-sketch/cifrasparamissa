@@ -6,6 +6,7 @@ import { lerPdfDeCifra } from '@/lib/pdfCifra';
 import { lerTxtDeCifra } from '@/lib/txtCifra';
 import { lerVideoDoYoutube, linkDoVideo } from '@/lib/youtube';
 import ConferirSalmo from '@/components/ConferirSalmo';
+import { destacarPartes } from '@/components/Destaque';
 const ehTxt = arq => /\.txt$/i.test(arq.name) || arq.type === 'text/plain';
 const lerArquivo = arq => (ehTxt(arq) ? lerTxtDeCifra(arq) : lerPdfDeCifra(arq));
 import { chave, simples, dataCurta, TEMPOS_ESPECIFICOS, nomeTempo } from '@/lib/util';
@@ -25,6 +26,7 @@ export function Editor({ ficha, inicial, onSalvo, onCancelar, existentes, youtub
   }));
   const [msg, setMsg] = useState(inicial && !inicial.tom ? 'Não encontrei o tom no arquivo: preencha o tom original.' : '');
   const [lendo, setLendo] = useState(false);
+  const [vendo, setVendo] = useState(false);
   const [okYt, setOkYt] = useState('');
   const set = k => e => setF({ ...f, [k]: e.target.value });
   const tomInvalido = t => t.trim() && !lerTom(t);
@@ -133,8 +135,17 @@ export function Editor({ ficha, inicial, onSalvo, onCancelar, existentes, youtub
         </label>
       </div>
       {!youtube && linhaYoutube}
-      <label>Cifra: acordes em cima da letra, como no Cifra Club</label>
+      <div className="row" style={{ alignItems: 'center' }}>
+        <label style={{ marginTop: 0 }}>Cifra: acordes em cima da letra, como no Cifra Club</label>
+        <button type="button" className="sec mini" onClick={() => setVendo(!vendo)} disabled={!f.cifra.trim()}>{vendo ? 'Fechar' : '👁 Ver música'}</button>
+      </div>
       <textarea rows={14} value={f.cifra} onChange={set('cifra')} placeholder="Cole aqui a cifra" style={mono} spellCheck={false} />
+      {vendo && (
+        <div style={{ marginBottom: 12 }}>
+          <p className="mut" style={{ fontSize: '.85rem', margin: '4px 0' }}>Como vai aparecer para o músico (confira as marcas [MASCULINO], [FEMININO], [AMBOS] e [Refrão]):</p>
+          <pre style={{ ...mono, padding: 12, border: '1px solid var(--line)', borderRadius: 3, background: 'var(--fundo)', margin: 0 }}>{destacarPartes(f.cifra, true)}</pre>
+        </div>
+      )}
       {salmo && f.cifra.trim() && <div style={{ margin: '-4px 0 12px' }}><ConferirSalmo cifra={f.cifra} letra={f.letra} salmo={salmo} aberto /></div>}
       <div className="grade2">
         <div>
