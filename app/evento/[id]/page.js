@@ -11,6 +11,7 @@ import BuscaMusicas from '@/components/BuscaMusicas';
 import { destacarPartes } from '@/components/Destaque';
 import ConviteBotao from '@/components/ConviteBotao';
 import CifraPre from '@/components/CifraPre';
+import TextoOracao from '@/components/TextoOracao';
 import CalibrarVoz from '@/components/CalibrarVoz';
 
 // Modo evento: a playlist do evento, música a música, com "Já toquei", troca de ordem
@@ -51,6 +52,7 @@ export default function ModoEvento() {
   const refs = useRef({});
   const abertoRef = useRef(null); abertoRef.current = aberto;
   const [convite, setConvite] = useState(null); // convidado: só leitura
+  const [adoracao, setAdoracao] = useState([]); // preces de adoração ao Santíssimo (evento do tipo Adoração)
 
   async function carregar(cv = convite) {
     if (cv) { // convidado: dados pela função do banco, só leitura
@@ -67,6 +69,15 @@ export default function ModoEvento() {
     const novo = { evento: a.data, itens: (b.data || []).map(x => ({ ...x, m: x.missa_musicas || null })), salvo_em: new Date().toISOString() };
     setD(novo); gravar(chave(id), novo); return novo;
   }
+
+  // Evento de Adoração: as preces cadastradas em Configurações › Orações (guardadas para uso sem internet)
+  useEffect(() => {
+    if (d?.evento?.tipo !== 'Adoração') return;
+    const k = chave(id) + ':adoracao';
+    supabase.rpc('missa_textos_adoracao').then(({ data, error }) => {
+      if (!error && Array.isArray(data)) { setAdoracao(data); gravar(k, data); } else setAdoracao(ler(k) || []);
+    }).catch(() => setAdoracao(ler(k) || []));
+  }, [d?.evento?.tipo, id]);
 
   useEffect(() => {
     setFonte(lerPref('missa:fonte', 1)); setFormato(lerPref('missa:formato', 'cifra') || 'cifra');
@@ -309,6 +320,12 @@ export default function ModoEvento() {
             {!online && <p className="mut" style={{ marginTop: 8 }}>Sem internet: dá para buscar, mas a música só entra na lista com conexão.</p>}
           </>}
       </div>}
+      {d?.evento?.tipo === 'Adoração' && adoracao.map(o => (
+        <div key={o.nome} className="card" style={{ marginTop: 12 }}>
+          <h2 style={{ marginTop: 0 }}>{o.nome}</h2>
+          <TextoOracao texto={o.texto} todos fonte={fonte} />
+        </div>
+      ))}
       {dono && <button type="button" className="sec cer-prox" style={{ marginTop: 8 }} onClick={sair}>◂ Sair do modo evento</button>}
     </div>
   );
