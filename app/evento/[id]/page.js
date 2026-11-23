@@ -55,6 +55,7 @@ export default function ModoEvento() {
   const [adoracao, setAdoracao] = useState([]); // preces de adoração ao Santíssimo (evento do tipo Adoração)
   const [fixa, setFixa] = useState(null); // música fixa do fim da adoração (Tão Sublime Sacramento)
   const [verFixa, setVerFixa] = useState(false);
+  const [ajusteFixa, setAjusteFixa] = useState(0); // meios tons ajustados só nesta tela (não é guardado)
 
   async function carregar(cv = convite) {
     if (cv) { // convidado: dados pela função do banco, só leitura
@@ -334,7 +335,22 @@ export default function ModoEvento() {
                 <span><strong>{fixa.nome}</strong> <span className="mut">· {fixa.artista} · tom {fixa.tom_original}</span></span>
                 <button type="button" className="sec mini" onClick={() => setVerFixa(!verFixa)}>{verFixa ? 'Fechar' : 'Ver cifra'}</button>
               </div>
-              {verFixa && <div style={{ marginTop: 8 }}><CifraPre texto={fixa.cifra} fonte={fonte} quebrar={quebrar} /></div>}
+              {verFixa && (() => {
+                const destinoFixa = fixa.tom_original ? nomeDoTom(fixa.tom_original, ajusteFixa) : null;
+                return (
+                  <>
+                    <div className="row" style={{ marginTop: 8 }}>
+                      <span className="mut" style={{ fontSize: '.9rem' }}>{destinoFixa ? <>Cifra em <strong>{destinoFixa}</strong></> : 'Cifra no tom original'}{ajusteFixa ? <> · {meioTom(ajusteFixa)}</> : null}</span>
+                      <span>
+                        {ajusteFixa !== 0 && <button type="button" className="sec cer-mini" onClick={() => setAjusteFixa(0)}>Desfazer</button>}
+                        <button type="button" className="sec cer-mini" onClick={() => setAjusteFixa(ajusteFixa - 1)}>−½ tom</button>
+                        <button type="button" className="sec cer-mini" onClick={() => setAjusteFixa(ajusteFixa + 1)}>+½ tom</button>
+                      </span>
+                    </div>
+                    <div style={{ marginTop: 8 }}><CifraPre texto={transporCifra(fixa.cifra, ajusteFixa, destinoFixa)} fonte={fonte} quebrar={quebrar} /></div>
+                  </>
+                );
+              })()}
             </div>
           )}
         </>
