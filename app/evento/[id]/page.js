@@ -330,7 +330,7 @@ export default function ModoEvento() {
         <>
           <h2 style={{ marginTop: 24 }}>Final</h2>
           {fixa && (
-            <div className="card">
+            <div className="card cer-mom cer-ativo">
               <div className="row">
                 <span><strong>{fixa.nome}</strong> <span className="mut">· {fixa.artista} · tom {fixa.tom_original}</span></span>
                 <button type="button" className="sec mini" onClick={() => setVerFixa(!verFixa)}>{verFixa ? 'Fechar' : 'Ver cifra'}</button>
@@ -348,6 +348,8 @@ export default function ModoEvento() {
                       </span>
                     </div>
                     <div style={{ marginTop: 8 }}><CifraPre texto={transporCifra(fixa.cifra, ajusteFixa, destinoFixa)} fonte={fonte} quebrar={quebrar} /></div>
+                    <div id="fixa-fim" />
+                    <Rolagem key={'fixa'} alvoId='fixa-fim' />
                   </>
                 );
               })()}
