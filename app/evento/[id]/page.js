@@ -12,6 +12,7 @@ import { destacarPartes } from '@/components/Destaque';
 import ConviteBotao from '@/components/ConviteBotao';
 import CifraPre from '@/components/CifraPre';
 import TextoOracao from '@/components/TextoOracao';
+import { CONJUNTOS_MISTERIOS, conjuntoDosMisterios } from '@/lib/misterios';
 import CalibrarVoz from '@/components/CalibrarVoz';
 
 // Modo evento: a playlist do evento, música a música, com "Já toquei", troca de ordem
@@ -192,6 +193,14 @@ export default function ModoEvento() {
     const novo = { ...ajustes, [it.id]: (ajustes[it.id] || 0) + dlt };
     setAjustes(novo); gravarPref(chave(id) + ':ajustes', novo);
   };
+  // Escolha manual do conjunto de mistérios do terço: fica no evento (vale para os convidados também)
+  async function escolherMisterios(conjunto) {
+    const novo = { ...d, evento: { ...d.evento, misterios: conjunto } };
+    setD(novo); gravar(chave(id), novo);
+    const { error } = await supabase.from('missa_eventos').update({ misterios: conjunto }).eq('id', id);
+    if (error) setMsg('Não foi possível salvar os mistérios: ' + error.message);
+  }
+
   function sair() {
     if (document.referrer && new URL(document.referrer).origin === location.origin && history.length > 1) history.back();
     else location.href = '/painel';
@@ -244,6 +253,21 @@ export default function ModoEvento() {
         {msg && <p className={msg.startsWith('Pronto') ? 'okmsg' : 'err'} style={{ margin: '8px 0 0' }}>{msg}</p>}
       </div>
 
+      {ev.tipo === 'Terço' && (() => {
+        const escolhido = conjuntoDosMisterios(ev.misterios);
+        return (
+          <div className="card" style={{ borderTopColor: 'var(--ouro)' }}>
+            <strong>Mistérios do terço</strong>
+            {dono && <div className="chips" style={{ margin: '8px 0' }}>
+              {CONJUNTOS_MISTERIOS.map(c => <button key={c.chave} type="button" className={'chip' + (ev.misterios === c.chave ? ' on' : '')} onClick={() => escolherMisterios(c.chave)}>{c.nome}</button>)}
+            </div>}
+            {escolhido ? <>
+              <p className="mut" style={{ margin: '4px 0 6px', fontSize: '.9rem' }}>{escolhido.nome} · rezados {escolhido.dias}</p>
+              <ol style={{ margin: 0, paddingLeft: 20 }}>{escolhido.lista.map(t => <li key={t}>{t}</li>)}</ol>
+            </> : <p className="mut" style={{ margin: '8px 0 0' }}>{dono ? 'Escolha o conjunto de mistérios acima.' : 'Os mistérios ainda não foram escolhidos.'}</p>}
+          </div>
+        );
+      })()}
       {itens.length === 0 && <div className="card mut">Nenhuma música na lista. Use “+ Adicionar música” abaixo.</div>}
       {itens.map((it, n) => {
         const m = it.m || {};
