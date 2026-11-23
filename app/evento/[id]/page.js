@@ -53,6 +53,8 @@ export default function ModoEvento() {
   const abertoRef = useRef(null); abertoRef.current = aberto;
   const [convite, setConvite] = useState(null); // convidado: só leitura
   const [adoracao, setAdoracao] = useState([]); // preces de adoração ao Santíssimo (evento do tipo Adoração)
+  const [fixa, setFixa] = useState(null); // música fixa do fim da adoração (Tão Sublime Sacramento)
+  const [verFixa, setVerFixa] = useState(false);
 
   async function carregar(cv = convite) {
     if (cv) { // convidado: dados pela função do banco, só leitura
@@ -77,6 +79,9 @@ export default function ModoEvento() {
     supabase.rpc('missa_textos_adoracao').then(({ data, error }) => {
       if (!error && Array.isArray(data)) { setAdoracao(data); gravar(k, data); } else setAdoracao(ler(k) || []);
     }).catch(() => setAdoracao(ler(k) || []));
+    supabase.rpc('missa_musica_fixa_adoracao').then(({ data, error }) => {
+      if (!error && data) { setFixa(data); gravar(k + ':fixa', data); } else setFixa(ler(k + ':fixa'));
+    }).catch(() => setFixa(ler(k + ':fixa')));
   }, [d?.evento?.tipo, id]);
 
   useEffect(() => {
@@ -320,6 +325,20 @@ export default function ModoEvento() {
             {!online && <p className="mut" style={{ marginTop: 8 }}>Sem internet: dá para buscar, mas a música só entra na lista com conexão.</p>}
           </>}
       </div>}
+      {d?.evento?.tipo === 'Adoração' && (
+        <>
+          <h2 style={{ marginTop: 24 }}>Final</h2>
+          {fixa && (
+            <div className="card">
+              <div className="row">
+                <span><strong>{fixa.nome}</strong> <span className="mut">· {fixa.artista} · tom {fixa.tom_original}</span></span>
+                <button type="button" className="sec mini" onClick={() => setVerFixa(!verFixa)}>{verFixa ? 'Fechar' : 'Ver cifra'}</button>
+              </div>
+              {verFixa && <div style={{ marginTop: 8 }}><CifraPre texto={fixa.cifra} fonte={fonte} quebrar={quebrar} /></div>}
+            </div>
+          )}
+        </>
+      )}
       {d?.evento?.tipo === 'Adoração' && adoracao.map(o => (
         <div key={o.nome} className="card" style={{ marginTop: 12 }}>
           <h2 style={{ marginTop: 0 }}>{o.nome}</h2>
