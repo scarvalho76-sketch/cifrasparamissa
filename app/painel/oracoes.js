@@ -36,7 +36,7 @@ export default function Oracoes() {
         </ul>
         Primeiro cadastre o <strong>Santo (rezado)</strong>, que vale para todas as orações.
       </div>
-      {[['eucaristica', null], ['preces', 'Preces · depois da Música durante a homilia (domingos e solenidades)'], ['final', 'Preces · entre a Ação de Graças e a Saída (domingos e solenidades)']].map(([g, titulo]) => <div key={g}>
+      {[['eucaristica', null], ['preces', 'Preces · depois da Música durante a homilia (domingos e solenidades)'], ['final', 'Preces · entre a Ação de Graças e a Saída (domingos e solenidades)'], ['adoracao', 'Preces - adoração ao Santíssimo']].map(([g, titulo]) => <div key={g}>
       {titulo && <h2 style={{ marginTop: 24 }}>{titulo}</h2>}
       {titulo && g === 'preces' && <p className="mut" style={{ marginTop: -6, fontSize: '.9rem' }}>Nas preces, linha sem marcação é rezada por todos (em negrito). O <strong>Credo</strong> vem selecionado; o Credo Niceno-Constantinopolitano fica como opção na hora da missa.</p>}
       {lista.filter(o => (o.grupo || 'eucaristica') === g).map(o => (
