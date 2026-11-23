@@ -39,6 +39,14 @@ export default function Amigos() {
     if (a.ativo && !confirm(`Desativar ${a.nome}? Ele perde o acesso na hora (as missas dele ficam guardadas).`)) return;
     await supabase.from('missa_contas').update({ ativo: !a.ativo }).eq('id', a.id); carregar();
   }
+  async function excluir(a) {
+    const r = resumo[a.id];
+    const tem = r && (r.missas || r.musicos) ? `\n\nSerão apagadas também ${r.missas} ${r.missas === 1 ? 'missa' : 'missas'} e ${r.musicos} ${r.musicos === 1 ? 'músico' : 'músicos'} dele.` : '';
+    if (!confirm(`Excluir ${a.nome}? Ele perde o acesso na hora e não tem como voltar.${tem}\n\nSe quiser só bloquear o acesso por um tempo, use Desativar.`)) return;
+    const { error } = await supabase.from('missa_contas').delete().eq('id', a.id);
+    if (error) return alert('Não foi possível excluir: ' + error.message);
+    carregar();
+  }
   async function copiar(a) {
     try { await navigator.clipboard.writeText(linkAmigo(a.token)); setCopiado(a.id); setTimeout(() => setCopiado(''), 2000); }
     catch { prompt('Copie o link:', linkAmigo(a.token)); }
@@ -86,6 +94,7 @@ export default function Amigos() {
             {a.telefone && <a className="chip" href={linkWhatsApp(a.telefone, texto(a))} target="_blank" rel="noreferrer" style={{ textDecoration: 'none' }}>Enviar link pelo WhatsApp</a>}
             <button className="chip" onClick={() => novoLink(a)}>Gerar novo link</button>
             <button className="chip" onClick={() => ativar(a)}>{a.ativo ? 'Desativar' : 'Reativar'}</button>
+            <button className="chip" onClick={() => excluir(a)} style={{ color: 'var(--bad)', borderColor: 'var(--bad)' }}>Excluir</button>
           </div>
         </div>
       ))}
