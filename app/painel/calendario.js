@@ -72,7 +72,13 @@ export default function Calendario({ onAbrir, onNova, onAbrirEvento, onNovoEvent
   const novoEvento = d => onNovoEvento(txtData(d));
 
   const Cartao = ({ x }) => {
-    // missas e eventos dos amigos: só para ver (o administrador não abre o que é do amigo)
+    // missas dos amigos: o administrador abre no modo cerimônia (só para ver); eventos dos amigos ficam só como aviso
+    if (x.deAmigo && !x.evento) return (
+      <a className={'cal-missa cal-amigo cal-' + (COR[x.tempo] || 'verde')} href={'/missa/' + x.id} title={`Abrir o modo cerimônia · cadastrado por ${x.conta}`}>
+        <span className="cal-hora">{fmtHora(x.data_hora)}</span> <span className="cal-tit">{x.titulo || 'Missa'}</span>
+        <span className="cal-local">👤 {x.conta}{x.local ? ' · ' + x.local : ''}</span>
+      </a>
+    );
     if (x.deAmigo) return (
       <div className={'cal-missa cal-amigo' + (x.evento ? ' cal-evento' : ' cal-' + (COR[x.tempo] || 'verde'))} title={`Cadastrado por ${x.conta}`}>
         <span className="cal-hora">{x.evento ? '♪ ' : ''}{fmtHora(x.data_hora)}</span> <span className="cal-tit">{x.evento ? (x.nome || x.evento_tipo || 'Evento') : (x.titulo || 'Missa')}</span>
