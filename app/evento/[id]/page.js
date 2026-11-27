@@ -396,6 +396,7 @@ export default function ModoEvento() {
         </div>
       ))}
       {dono && <button type="button" className="sec cer-prox" style={{ marginTop: 8 }} onClick={sair}>◂ Sair do modo evento</button>}
+      {d.amigo && <button type="button" className="sec cer-prox" style={{ marginTop: 8 }} onClick={() => { gravarPref('painel:aba', 'calendario'); location.href = '/painel'; }}>◂ Voltar para o calendário</button>}
     </div>
   );
 }
