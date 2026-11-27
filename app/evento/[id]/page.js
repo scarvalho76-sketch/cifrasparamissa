@@ -3,7 +3,7 @@ import { useEffect, useRef, useState } from 'react';
 import { useParams } from 'next/navigation';
 import { supabase } from '@/lib/supabase';
 import { dataLonga, lerPref, gravarPref } from '@/lib/util';
-import { transporCifra, distancia, nomeDoTom, gerarGrade, letraDaCifra } from '@/lib/musica';
+import { transporCifra, distancia, nomeDoTom, gerarGrade, letraDaCifra, paraGraus } from '@/lib/musica';
 import { carregarBiblioteca } from '@/lib/biblioteca';
 import { tonsLocais, sincronizarTons, salvarTomPreferido } from '@/lib/tons';
 import Rolagem from '@/components/Rolagem';
@@ -232,7 +232,7 @@ export default function ModoEvento() {
           <button type="button" className="sec cer-mini" onClick={() => mudarFonte(-0.1)} aria-label="Diminuir texto">A−</button>
           <button type="button" className="sec cer-mini" onClick={() => mudarFonte(0.1)} aria-label="Aumentar texto">A+</button>
           <span className="row" style={{ gap: 6, marginLeft: 'auto' }}>
-            {[['letra', 'Letra'], ['cifra', 'Cifra'], ['grade', 'Grade']].map(([k, t]) => <button key={k} type="button" className={'cer-mini' + (formato === k ? '' : ' sec')} onClick={() => mudarFormato(k)}>{t}</button>)}
+            {[['letra', 'Letra'], ['cifra', 'Cifra'], ['grade', 'Grade'], ['graus', 'Graus']].map(([k, t]) => <button key={k} type="button" className={'cer-mini' + (formato === k ? '' : ' sec')} onClick={() => mudarFormato(k)}>{t}</button>)}
           </span>
         </div>
         {algumCapo && (
@@ -282,8 +282,9 @@ export default function ModoEvento() {
         const destino = m.tom_original ? nomeDoTom(m.tom_original, total) : null;
         const forma = m.tom_original ? nomeDoTom(m.tom_original, total - capo) : null;
         const querGrade = formato === 'grade';
+        const graus = formato === 'graus'; // graus: cada acorde vira o grau dele no tom da música
         const base = mostraCifra ? (querGrade ? (m.grade || (m.cifra ? gerarGrade(m.cifra) : '') || m.cifra) : m.cifra) : (m.letra || letraDaCifra(m.cifra));
-        const texto = base ? (mostraCifra ? transporCifra(base, total - capo, capo ? forma : (ajuste === 0 && auto !== null ? tom : destino)) : base) : '';
+        const texto = graus ? paraGraus(m.cifra || '', m.tom_original) : base ? (mostraCifra ? transporCifra(base, total - capo, capo ? forma : (ajuste === 0 && auto !== null ? tom : destino)) : base) : '';
         return (
           <div key={it.id} ref={el => { refs.current[n] = el; }} className={'card cer-mom' + (ativo ? ' cer-ativo' : '') + (it.tocada ? ' ev-tocada' : '')}>
             <div className="row" style={{ flexWrap: 'nowrap', alignItems: 'center' }}>
@@ -310,7 +311,7 @@ export default function ModoEvento() {
             {ativo && (
               <div style={{ marginTop: 12 }}>
                 {m.video && <a className="yt-link" href={m.video} target="_blank" rel="noreferrer">▶ Ouvir no YouTube</a>}
-                {mostraCifra && base && (
+                {mostraCifra && base && !graus && (
                   <div className="row" style={{ marginBottom: 8 }}>
                     <span style={{ fontSize: '.9rem' }}>
                       {capo ? <>Capo na <strong>{capo}ª casa</strong> · formas de <strong>{forma || '?'}</strong>{destino ? <span className="mut"> · soa em {destino}</span> : null}</>

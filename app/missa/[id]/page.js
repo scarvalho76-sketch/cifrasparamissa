@@ -10,7 +10,7 @@ import Rolagem from '@/components/Rolagem';
 import CifraPre from '@/components/CifraPre';
 import { destacarPartes } from '@/components/Destaque';
 import CalibrarVoz from '@/components/CalibrarVoz';
-import { transporCifra, distancia, nomeDoTom, lerTom, gerarGrade, letraDaCifra } from '@/lib/musica';
+import { transporCifra, distancia, nomeDoTom, lerTom, gerarGrade, letraDaCifra, paraGraus } from '@/lib/musica';
 
 // Modo celebração: só aquela missa, momento a momento (adaptado do Modo cerimônia do Sonata Casamentos).
 // Quem só canta vê a letra; quem toca vê a cifra ou a grade. Cada um pode trocar.
@@ -388,7 +388,7 @@ export default function Cerimonia() {
           <button type="button" className="sec cer-mini" onClick={() => mudarFonte(-0.1)} aria-label="Diminuir texto">A−</button>
           <button type="button" className="sec cer-mini" onClick={() => mudarFonte(0.1)} aria-label="Aumentar texto">A+</button>
           <span className="row" style={{ gap: 6, marginLeft: 'auto' }}>
-            {[['letra', 'Letra'], ['cifra', 'Cifra'], ['grade', 'Grade']].map(([k, t]) => (
+            {[['letra', 'Letra'], ['cifra', 'Cifra'], ['grade', 'Grade'], ['graus', 'Graus']].map(([k, t]) => (
               <button key={k} type="button" className={'cer-mini' + (visao === k ? '' : ' sec')} onClick={() => mudarFormato(k)}>{t}</button>
             ))}
           </span>
@@ -534,11 +534,12 @@ export default function Cerimonia() {
         const forma = i.tom_original ? nomeDoTom(i.tom_original, total - capo) : null;
         // Grade: a cadastrada na Biblioteca; se não houver, gerada na hora a partir da cifra
         const querGrade = visao === 'grade';
+        const graus = visao === 'graus'; // graus: cada acorde vira o grau dele no tom da música
         const gradeAuto = querGrade && !i.grade && i.cifra ? gerarGrade(i.cifra) : '';
         // letra: a cadastrada; se não houver, a própria cifra sem as linhas de acordes
         const letraVista = i.letra || letraDaCifra(i.cifra);
         const base = mostraCifra ? (querGrade ? (i.grade || gradeAuto || i.cifra) : i.cifra) : letraVista;
-        const texto = mostraCifra ? transporCifra(base, total - capo, capo ? forma : (ajuste === 0 && auto !== null ? tomUsado : destino)) : base;
+        const texto = graus ? paraGraus(i.cifra || '', i.tom_original) : mostraCifra ? transporCifra(base, total - capo, capo ? forma : (ajuste === 0 && auto !== null ? tomUsado : destino)) : base;
         const semAjuste = ajuste === 0 && !(i.musica_id && tons[i.musica_id]);
         const falta = i.avulsa && !i.nome ? '' : !i.nome ? 'Nenhuma música escolhida para este momento.' : mostraCifra ? 'A cifra desta música ainda não foi cadastrada.' : 'A letra desta música ainda não foi cadastrada.';
         let aviso = '';
@@ -568,7 +569,7 @@ export default function Cerimonia() {
                 {i.avulsa && <BuscaAvulsa biblioteca={biblioteca} escolhida={escolhida}
                   onEscolher={id => { setAvulsa(id); setTimeout(() => refs.current[n]?.scrollIntoView({ behavior: 'smooth', block: 'start' }), 60); }} />}
                 {voltarOE && n === idxSanto && idxOE >= 0 && <button type="button" className="sec cer-prox" style={{ marginTop: 0, marginBottom: 10 }} onClick={voltarParaOracao}>◂ Voltar à Oração Eucarística</button>}
-                {mostraCifra && base && (
+                {mostraCifra && base && !graus && (
                   <div className="row" style={{ marginBottom: 8 }}>
                     <span style={{ fontSize: '.9rem' }}>
                       {capo ? <>Capo na <strong>{capo}ª casa</strong> · formas de <strong>{forma || '?'}</strong>{destino ? <span className="mut"> · soa em {destino}</span> : null}</>
