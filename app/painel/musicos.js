@@ -21,7 +21,7 @@ export default function Musicos() {
   async function salvar() {
     setMsg('');
     if (!f.nome.trim()) return setMsg('Informe o nome.');
-    const dados = { nome: f.nome.trim(), telefone: f.telefone ? normalizarTelefone(f.telefone) : '', instrumento: f.instrumento.trim() };
+    const dados = { nome: f.nome.trim(), telefone: f.telefone ? normalizarTelefone(f.telefone) : '', instrumento: f.instrumento.trim(), genero: f.genero || null };
     const { error } = f.id ? await supabase.from('missa_musicos').update(dados).eq('id', f.id) : await supabase.from('missa_musicos').insert(dados);
     if (error) return setMsg('Não foi possível salvar: ' + error.message);
     setF(null); carregar();
@@ -46,6 +46,12 @@ export default function Musicos() {
         <div><label>WhatsApp (com DDD)</label><input value={f.telefone} onChange={e => setF({ ...f, telefone: e.target.value })} inputMode="tel" /></div>
         <div><label>Instrumento (ex.: Voz, Violão, Voz e teclado)</label><input value={f.instrumento} onChange={e => setF({ ...f, instrumento: e.target.value })} /></div>
       </div>
+      <label>Voz (define o ícone de cantor na agenda)</label>
+      <select value={f.genero || ''} onChange={e => setF({ ...f, genero: e.target.value })}>
+        <option value="">Automático pelo nome</option>
+        <option value="M">Masculina</option>
+        <option value="F">Feminina</option>
+      </select>
       <p className="mut" style={{ marginTop: -6 }}>Quem tem “voz” e nenhum instrumento vê a letra; quem toca vê a cifra. No Modo celebração cada um pode trocar.</p>
       {msg && <p className="err">{msg}</p>}
       <div className="row" style={{ justifyContent: 'flex-start' }}>
@@ -59,7 +65,7 @@ export default function Musicos() {
     <>
       <div className="row" style={{ marginBottom: 12 }}>
         <h2 style={{ margin: 0 }}>Músicos</h2>
-        {!f && <button className="sec" onClick={() => setF({ nome: '', telefone: '', instrumento: '' })}>+ Novo músico</button>}
+        {!f && <button className="sec" onClick={() => setF({ nome: '', telefone: '', instrumento: '', genero: '' })}>+ Novo músico</button>}
       </div>
       {f && !f.id && Form()}
       {lista.length === 0 && !f && <div className="card mut">Nenhum músico cadastrado. Você não precisa se cadastrar aqui: você já entra no painel com o seu próprio acesso.</div>}

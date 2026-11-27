@@ -8,6 +8,19 @@ const DIAS = ['Dom', 'Seg', 'Ter', 'Qua', 'Qui', 'Sex', 'Sáb'];
 const MESES = ['Janeiro', 'Fevereiro', 'Março', 'Abril', 'Maio', 'Junho', 'Julho', 'Agosto', 'Setembro', 'Outubro', 'Novembro', 'Dezembro'];
 const p2 = n => String(n).padStart(2, '0');
 const chaveDia = d => `${d.getFullYear()}-${p2(d.getMonth() + 1)}-${p2(d.getDate())}`;
+// Ícone de voz da agenda: 🎤 cantor masculino, 👩‍🎤 cantora, 🎤🎤 dueto (homem e mulher)
+// Sem o campo Voz no cadastro, o gênero é adivinhado pelo nome (quem termina em "a" é feminino)
+const NOMES_MASCULINOS_EM_A = [luca, nicola, joshua, elias];
+const generoDoNome = nome => {
+  const p = String(nome || '').trim().split(/\s+/)[0].toLowerCase();
+  return p.endsWith('a') && !NOMES_MASCULINOS_EM_A.includes(p) ? 'F' : 'M';
+};
+const iconeVoz = cantores => {
+  if (!cantores || !cantores.length) return '';
+  const generos = new Set(cantores.map(c => c.genero || generoDoNome(c.nome)));
+  if (generos.has('M') && generos.has('F')) return '🎤🎤';
+  return generos.has('F') ? '👩‍🎤' : '🎤';
+};
 const COR = { 'Tempo Comum': 'verde', Advento: 'roxo', Quaresma: 'roxo', 'Semana Santa': 'vermelho', Natal: 'branco', 'Páscoa': 'branco', 'Solenidade / Festa': 'branco' };
 
 export default function CalendarioMusico({ missas }) {
@@ -35,7 +48,7 @@ export default function CalendarioMusico({ missas }) {
     <a href={'/missa/' + x.id} className={'cal-missa cal-' + (COR[x.tempo] || 'verde')} style={{ textDecoration: 'none' }} title="Abrir o Modo celebração">
       <span className="cal-hora">{fmtHora(x.data_hora)}</span> <span className="cal-tit">{x.titulo || 'Missa'}</span>
       {x.local && <span className="cal-local">{x.local}</span>}
-      {x.instrumento && <span className="cal-local">{x.instrumento}</span>}
+      {(x.instrumento || iconeVoz(x.cantores)) && <span className="cal-local">{iconeVoz(x.cantores)}{iconeVoz(x.cantores) && x.instrumento ? ' ' : ''}{x.instrumento}</span>}
     </a>
   );
 
@@ -46,7 +59,7 @@ export default function CalendarioMusico({ missas }) {
           <div className="card" style={{ borderLeft: '4px solid var(--ouro)' }}>
             <span className="mut" style={{ fontSize: '.85rem' }}>Próxima missa</span>
             <div><strong>{dataLonga(proxima.data_hora)}</strong></div>
-            <div>{[proxima.titulo, proxima.local].filter(Boolean).join(' · ') || 'Missa'}{proxima.instrumento ? <span className="mut"> · {proxima.instrumento}</span> : null}</div>
+            <div>{[proxima.titulo, proxima.local].filter(Boolean).join(' · ') || 'Missa'}{iconeVoz(proxima.cantores) ? <span> {iconeVoz(proxima.cantores)}</span> : null}{proxima.instrumento ? <span className="mut"> · {proxima.instrumento}</span> : null}</div>
             <div style={{ marginTop: 6, color: 'var(--ouro-escuro)' }}>🎼 Abrir modo celebração ▸</div>
           </div>
         </a>
