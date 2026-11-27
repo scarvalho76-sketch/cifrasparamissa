@@ -66,10 +66,16 @@ export default function ModoEvento() {
       setD(novo); gravar(chave(id), novo); return novo;
     }
     const [a, b] = await Promise.all([
-      supabase.from('missa_eventos').select('*').eq('id', id).single(),
+      supabase.from('missa_eventos').select('*').eq('id', id).maybeSingle(),
       supabase.from('missa_evento_musicas').select(`id, ordem, tocada, tom, capo, musica_id, missa_musicas(${CAMPOS})`).eq('evento_id', id).order('ordem')
     ]);
     if (a.error) throw a.error;
+    if (!a.data) { // não é do administrador: é evento de amigo, aberto só para ver
+      const { data, error } = await supabase.rpc('missa_evento_admin', { p_id: id });
+      if (error) throw error;
+      const novo = { ...data, convidado: true, amigo: true, salvo_em: new Date().toISOString() };
+      setD(novo); gravar(chave(id), novo); return novo;
+    }
     const novo = { evento: a.data, itens: (b.data || []).map(x => ({ ...x, m: x.missa_musicas || null })), salvo_em: new Date().toISOString() };
     setD(novo); gravar(chave(id), novo); return novo;
   }
@@ -221,7 +227,8 @@ export default function ModoEvento() {
         <h1 style={{ marginTop: 4 }}>{ev.nome || ev.tipo || 'Evento'}</h1>
         <div className="mut">{[ev.tipo, ev.local].filter(Boolean).join(' · ')} · {itens.length} {itens.length === 1 ? 'música' : 'músicas'}{tocadas ? ` · ${tocadas} já tocada${tocadas > 1 ? 's' : ''}` : ''}</div>
         {ev.obs && <p style={{ margin: '6px 0 0' }}>{ev.obs}</p>}
-        {d.convidado && <p className="mut" style={{ margin: '6px 0 0', fontSize: '.9rem' }}>Acesso de convidado (só para ver)</p>}
+        {d.amigo && <p className="mut" style={{ margin: '6px 0 0', fontSize: '.9rem' }}>Evento cadastrado por {ev.conta || 'um amigo'} (só para ver)</p>}
+        {d.convidado && !d.amigo && <p className="mut" style={{ margin: '6px 0 0', fontSize: '.9rem' }}>Acesso de convidado (só para ver)</p>}
         {dono && <div style={{ marginTop: 8 }}><ConviteBotao evento missaId={ev.id} dataHora={ev.data_hora} titulo={ev.nome || ev.tipo} /></div>}
         <div className="row" style={{ marginTop: 10 }}>
           <span className="mut" style={{ fontSize: '.9rem' }}>{!online ? 'Você está sem internet' : ler(chave(id) + ':pagina') ? '✓ Disponível sem internet' : 'Ainda não guardado para uso sem internet'}</span>

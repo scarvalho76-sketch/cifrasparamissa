@@ -79,6 +79,12 @@ export default function Calendario({ onAbrir, onNova, onAbrirEvento, onNovoEvent
         <span className="cal-local">👤 {x.conta}{x.local ? ' · ' + x.local : ''}</span>
       </a>
     );
+    if (x.deAmigo && x.evento) return (
+      <a className="cal-missa cal-amigo cal-evento" href={'/evento/' + x.id} title={`Abrir o evento no modo evento · cadastrado por ${x.conta}`}>
+        <span className="cal-hora">♪ {fmtHora(x.data_hora)}</span> <span className="cal-tit">{x.nome || x.evento_tipo || 'Evento'}</span>
+        <span className="cal-local">👤 {x.conta}{x.local ? ' · ' + x.local : ''}</span>
+      </a>
+    );
     if (x.deAmigo) return (
       <div className={'cal-missa cal-amigo' + (x.evento ? ' cal-evento' : ' cal-' + (COR[x.tempo] || 'verde'))} title={`Cadastrado por ${x.conta}`}>
         <span className="cal-hora">{x.evento ? '♪ ' : ''}{fmtHora(x.data_hora)}</span> <span className="cal-tit">{x.evento ? (x.nome || x.evento_tipo || 'Evento') : (x.titulo || 'Missa')}</span>
